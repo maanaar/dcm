@@ -11,8 +11,8 @@ const navItems = [
 
 export default function Navbar() {
   return (
-    <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b">
-      <div className="h-14 flex items-center px-6 gap-4">
+    <div className="sticky top-0 z-50 w-full bg-white/70 backdrop-blur-md border-b">
+      <div className="h-14 w-full flex items-center px-6 gap-4">
         <button className="text-xl">☰</button>
 
         {navItems.map((item) => (
@@ -31,6 +31,6 @@ export default function Navbar() {
           </NavLink>
         ))}
       </div>
-    </header>
+    </div>
   );
 }
