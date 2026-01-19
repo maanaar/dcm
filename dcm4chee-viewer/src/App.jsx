@@ -7,6 +7,8 @@ import MWLPage from "./pages/mwl.jsx";
 import PatientsPage from "./pages/PatientPage.jsx";
 import Background from "./components/background.jsx";
 import Navbar from "./components/navbar.jsx";
+import StudiesPage from "./pages/studies.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
 
 export default function App() {
   return (
@@ -15,6 +17,7 @@ export default function App() {
         <Background />
 
         <div className="relative z-10 flex flex-col w-full flex-1">
+          
           <Navbar />
 
           <main className="w-full flex-1">
@@ -22,6 +25,8 @@ export default function App() {
               <Route path="/" element={<Navigate to="/mwl" />} />
               <Route path="/mwl" element={<MWLPage />} />
               <Route path="/patients" element={<PatientsPage />} />
+              <Route path="/studies" element={<StudiesPage/>} />
+              <Route path="/login" element={<LoginPage/>} />
             </Routes>
           </main>
         </div>
