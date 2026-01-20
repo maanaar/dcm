@@ -1,4 +1,8 @@
+import { useLocation } from "react-router-dom";
+
 export default function Background() {
+  const location = useLocation();
+  const hideNavbar = location.pathname === "/login";
   return (
     <div className="fixed inset-0 -z-50">
       {/* background image */}
@@ -8,7 +12,7 @@ export default function Background() {
       />
 
       {/* white blur overlay */}
-      <div className="absolute inset-0 bg-white/60 backdrop-blur-sm" />
+      {!hideNavbar && <div className="absolute inset-0 bg-white/60 backdrop-blur-sm" />}
     </div>
   );
 }

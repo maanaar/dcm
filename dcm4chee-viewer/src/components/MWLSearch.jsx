@@ -1,6 +1,6 @@
 export default function MWLSearchBox() {
   return (
-    <div className="w-full max-w-5xl bg-white/70 backdrop-blur-md border border-white/30 rounded-xl shadow-lg p-6">
+    <div className=" w-full  bg-white/70 backdrop-blur-md border border-white/30 rounded-xl shadow-lg p-6">
 
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
