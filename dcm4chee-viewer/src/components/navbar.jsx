@@ -7,6 +7,7 @@ const navItems = [
   { name: "MPPS", path: "/mpps" },
   { name: "Work Items", path: "/work-items" },
   { name: "Compare", path: "/compare" },
+  { name: "Dashboard", path: "/dashboard" },
 ];
 
 export default function Navbar() {
