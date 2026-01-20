@@ -5,6 +5,7 @@ import Background from "./components/background.jsx";
 import Navbar from "./components/navbar.jsx";
 import StudiesPage from "./pages/studies.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
+import DashboardPage from "./pages/DCMDashboard.jsx";
 
 function AppContent() {
   const location = useLocation();
@@ -24,6 +25,7 @@ function AppContent() {
             <Route path="/patients" element={<PatientsPage />} />
             <Route path="/studies" element={<StudiesPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/dashboard" element={<DashboardPage/>} />
           </Routes>
         </main>
       </div>
