@@ -4,8 +4,8 @@ export default function MWLSearchBox() {
 
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-xl">✴</span>
-        <h2 className="text-xl font-semibold">MWL</h2>
+        <span className="text-2xl text-[rgb(215,160,56)]">✴</span>
+        <h2 className="text-2xl font-semibold">MWL</h2>
       </div>
 
       {/* Fields */}

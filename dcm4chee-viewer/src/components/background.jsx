@@ -12,7 +12,7 @@ export default function Background() {
       />
 
       {/* white blur overlay */}
-      {!hideNavbar && <div className="absolute inset-0 bg-white/60 backdrop-blur-sm" />}
+      {!hideNavbar && <div className="absolute inset-0 bg-white/75 backdrop-blur-sm" />}
     </div>
   );
 }

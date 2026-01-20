@@ -68,8 +68,8 @@ export default function LoginPage() {
     <div className="w-full flex items-center justify-end relative">
       {/* Card */}
       
-      <div className="flex flex-col min-h-screen space-y-6 w-[40%] justify-center bg-white/40 backdrop-blur-md border shadow-lg rounded-xl p-8 z-10">
-        <span className="flex text-7xl justify-center ">✴</span>
+      <div className="flex flex-col min-h-screen space-y-6 w-[40%] justify-center bg-[rgba(255,255,255,0.8)] backdrop-blur-md border shadow-lg rounded-xl p-8 z-10">
+        <span className="flex text-7xl justify-center  text-[rgb(215,160,56)] ">✴</span>
         <h1 className="text-4xl font-bold text-center">Welcome Again!</h1>
         
         <h3 className="text-2xl font-semibold text-center">Login</h3>
