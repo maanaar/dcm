@@ -3,7 +3,8 @@ export default function studiesBox() {
   return (
     <div className="w-full bg-white/80 backdrop-blur-md border shadow">
       {/* Header */}
-      <div className="px-6 py-3 border-b">
+      <div className="flex gap-2 px-6 py-3 border-b">
+        <span className="text-2xl text-[rgb(215,160,56)]">✴</span>
         <h2 className="text-2xl font-semibold">Studies</h2>
       </div>
 

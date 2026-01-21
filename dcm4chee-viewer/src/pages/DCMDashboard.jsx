@@ -125,7 +125,7 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-4xl font-bold text-black-800">Hospital Dashboard</h1>
+              <h1 className="text-4xl font-bold text-[rgb(45,97,135)]">Hospital Dashboard</h1>
               <p className="text-black-600 mt-2">DICOM Network Management System</p>
               {currentUser && (
                 <p className="text-sm text-black-500 mt-1">
