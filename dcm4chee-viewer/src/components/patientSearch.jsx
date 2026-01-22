@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchPatients } from '../services/api'; // Import the API function
+import { searchPatients } from '../services/dcmchee'; // Import the API function
 
 export default function PatientSearch() {
   const navigate = useNavigate();
