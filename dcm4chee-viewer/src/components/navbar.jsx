@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { CuraLinkLogo } from "./CUraLinkLogo";
 
 const navItems = [
   { name: "Patients", path: "/patients" },
@@ -31,6 +32,7 @@ export default function Navbar() {
             {item.name}
           </NavLink>
         ))}
+        
       </div>
     </div>
   );

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CuraLinkLogo } from '../components/CUraLinkLogo.jsx';
+
+
 
 // Dummy account credentials
 const DUMMY_ACCOUNT = {
@@ -69,10 +72,12 @@ export default function LoginPage() {
       {/* Card */}
       
       <div className="flex flex-col min-h-screen space-y-6 w-[40%] justify-center bg-[rgba(255,255,255,0.8)] backdrop-blur-md border shadow-lg rounded-xl p-8 z-10">
-        <span className="flex text-7xl justify-center  text-[rgb(215,160,56)] ">✴</span>
-        <h1 className="text-4xl font-bold text-center">Welcome Again!</h1>
+        {/* <span className="flex text-7xl justify-center  text-[rgb(215,160,56)] ">✴ </span> */}
+        <CuraLinkLogo size="default" />
+
+        <h2 className="text-3xl font-bold text-center">Welcome Again!</h2>
         
-        <h3 className="text-2xl font-semibold text-center">Login</h3>
+        {/* <h3 className="text-2xl font-semibold text-center">Login</h3> */}
 
         {/* Demo Credentials Info
         <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-sm">
