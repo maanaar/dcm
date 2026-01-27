@@ -1,62 +1,13 @@
-const API_BASE = import.meta.env.VITE_API_BASE;
-const KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL;
-const USERNAME = import.meta.env.VITE_DCM4CHEE_USERNAME;
-const PASSWORD = import.meta.env.VITE_DCM4CHEE_PASSWORD;
+/**
+ * CuraLink DICOM API Client
+ * Connects to FastAPI backend for dcm4chee operations
+ */
 
-export const getToken = async () => {
-  try {
-    const response = await fetch(
-      `${KEYCLOAK_URL}/realms/dcm4che/protocol/openid-connect/token`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'password',
-          client_id: 'dcm4chee-arc-ui',
-          username: USERNAME,
-          password: PASSWORD,
-        }),
-      }
-    );
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
 
-    if (!response.ok) {
-      throw new Error('Failed to authenticate');
-    }
-
-    const data = await response.json();
-    return data.access_token;
-  } catch (error) {
-    console.error('Error getting token:', error);
-    throw error;
-  }
-};
-
-export const fetchStudies = async () => {
-  try {
-    const token = await getToken();
-
-    const response = await fetch(
-      `${API_BASE}/dcm4chee-arc/aets/DCM4CHEE/rs/studies`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching studies:', error);
-    throw error;
-  }
-};
+// ============================================================================
+// PATIENTS API
+// ============================================================================
 
 /**
  * Search for patients based on form criteria
@@ -65,14 +16,11 @@ export const fetchStudies = async () => {
  */
 export const searchPatients = async (formData) => {
   try {
-    const token = await getToken();
-
     // Build query parameters from form data
     const queryParams = new URLSearchParams();
 
-    // Map form fields to DICOM query parameters
+    // Patient information
     if (formData.patientFamilyName) {
-      // Use fuzzy matching if enabled
       const name = formData.fuzzyMatching 
         ? `*${formData.patientFamilyName}*` 
         : formData.patientFamilyName;
@@ -92,7 +40,6 @@ export const searchPatients = async (formData) => {
     }
 
     if (formData.birthDate) {
-      // Convert date format from YYYY-MM-DD to YYYYMMDD (DICOM format)
       const dicomDate = formData.birthDate.replace(/-/g, '');
       queryParams.append('PatientBirthDate', dicomDate);
     }
@@ -101,52 +48,178 @@ export const searchPatients = async (formData) => {
       queryParams.append('PatientVerificationStatus', formData.verificationStatus);
     }
 
-    // Add limit
+    // Filters
     if (formData.limitOfPatients) {
       queryParams.append('limit', formData.limitOfPatients);
     }
 
-    // Add ordering
     if (formData.orderBy) {
       queryParams.append('orderby', formData.orderBy);
     }
 
-    // Add filter for patients with studies
     if (formData.onlyWithStudies) {
       queryParams.append('onlyWithStudies', 'true');
     }
 
-    // Add merged patients filter
     if (formData.mergedPatients) {
       queryParams.append('merged', 'true');
     }
 
-    // Build the endpoint URL based on web app service
-    const endpoint = `${API_BASE}/${formData.webAppService}/aets/DCM4CHEE/rs/patients`;
-    const url = `${endpoint}?${queryParams.toString()}`;
+    // Make API request
+    const url = `${API_BASE}/patients?${queryParams.toString()}`;
+    console.log('🔍 Searching patients:', url);
 
-    console.log('Searching patients with URL:', url);
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Accept': 'application/json',
-      },
-    });
+    const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`Search failed: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    
-    // Transform the response to match your UI format
     return transformPatientData(data);
   } catch (error) {
-    console.error('Error searching patients:', error);
+    console.error('❌ Error searching patients:', error);
     throw error;
   }
 };
+
+/**
+ * Get studies for a specific patient
+ * @param {string} patientId - The patient ID
+ * @returns {Promise<Array>} - Array of study records
+ */
+export const getPatientStudies = async (patientId) => {
+  try {
+    const url = `${API_BASE}/patients/${patientId}/studies`;
+    console.log('🔍 Getting patient studies:', url);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch studies: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    return transformStudyData(data);
+  } catch (error) {
+    console.error('❌ Error fetching patient studies:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// STUDIES API
+// ============================================================================
+
+/**
+ * Search for studies based on form criteria
+ * @param {Object} formData - The search form data
+ * @returns {Promise<Array>} - Array of study records
+ */
+export const searchStudies = async (formData) => {
+  try {
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+
+    // Patient information
+    if (formData.patientFamilyName) {
+      const name = formData.fuzzyMatching 
+        ? `*${formData.patientFamilyName}*` 
+        : formData.patientFamilyName;
+      queryParams.append('PatientName', name);
+    }
+
+    if (formData.patientId) {
+      queryParams.append('PatientID', formData.patientId);
+    }
+
+    if (formData.issuerOfPatient) {
+      queryParams.append('IssuerOfPatientID', formData.issuerOfPatient);
+    }
+
+    // Study information
+    if (formData.accessionNumber) {
+      queryParams.append('AccessionNumber', formData.accessionNumber);
+    }
+
+    if (formData.issuerOfAccessionNumber) {
+      queryParams.append('IssuerOfAccessionNumberSequence', formData.issuerOfAccessionNumber);
+    }
+
+    if (formData.studyDescription) {
+      queryParams.append('StudyDescription', formData.studyDescription);
+    }
+
+    if (formData.modality) {
+      queryParams.append('ModalitiesInStudy', formData.modality);
+    }
+
+    if (formData.referringPhysician) {
+      queryParams.append('ReferringPhysicianName', formData.referringPhysician);
+    }
+
+    if (formData.institutionalDepartmentName) {
+      queryParams.append('InstitutionalDepartmentName', formData.institutionalDepartmentName);
+    }
+
+    if (formData.sendingAET) {
+      queryParams.append('SendingApplicationEntityTitleOfSeries', formData.sendingAET);
+    }
+
+    // Dates (convert to DICOM format YYYYMMDD)
+    if (formData.studyDate) {
+      const dicomDate = formData.studyDate.replace(/-/g, '');
+      queryParams.append('StudyDate', dicomDate);
+    }
+
+    if (formData.studyTime) {
+      const dicomTime = formData.studyTime.replace(/:/g, '');
+      queryParams.append('StudyTime', dicomTime);
+    }
+
+    if (formData.studyReceived) {
+      const dicomDate = formData.studyReceived.replace(/-/g, '');
+      queryParams.append('StudyReceiveDateTime', dicomDate);
+    }
+
+    if (formData.studyAccess) {
+      const dicomDate = formData.studyAccess.replace(/-/g, '');
+      queryParams.append('StudyAccessDateTime', dicomDate);
+    }
+
+    // Filters
+    if (formData.limit) {
+      queryParams.append('limit', formData.limit);
+    }
+
+    if (formData.orderBy) {
+      queryParams.append('orderby', formData.orderBy);
+    }
+
+    // Make API request
+    const url = `${API_BASE}/studies?${queryParams.toString()}`;
+    console.log('🔍 Searching studies:', url);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Search failed: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    return transformStudyData(data);
+  } catch (error) {
+    console.error('❌ Error searching studies:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// DATA TRANSFORMERS
+// ============================================================================
 
 /**
  * Transform DICOM patient data to UI-friendly format
@@ -155,69 +228,110 @@ export const searchPatients = async (formData) => {
  */
 const transformPatientData = (dicomData) => {
   if (!Array.isArray(dicomData)) {
+    console.warn('Expected array but got:', typeof dicomData);
     return [];
   }
 
   return dicomData.map((patient, index) => {
-    // DICOM data uses tag-based structure
-    const getValue = (tag, vr = 'Value', index = 0) => {
-      return patient[tag]?.[vr]?.[index] || '';
+    const getValue = (tag, vr = 'Value', idx = 0) => {
+      return patient[tag]?.[vr]?.[idx] || '';
     };
 
-    // Extract patient name (usually in format: LastName^FirstName)
+    // Extract patient name (format: LastName^FirstName)
     const patientName = getValue('00100010', 'Value', 0)?.Alphabetic || '';
     const nameParts = patientName.split('^');
     const displayName = nameParts.length > 1 
       ? `${nameParts[1]} ${nameParts[0]}` 
       : patientName;
 
-    // Extract birth date and format it
+    // Extract and format birth date
     const birthDate = getValue('00100030');
-    const formattedBirthDate = birthDate 
+    const formattedBirthDate = birthDate && birthDate.length === 8
       ? `${birthDate.slice(0, 4)}-${birthDate.slice(4, 6)}-${birthDate.slice(6, 8)}`
-      : '';
+      : birthDate;
 
     return {
-      id: patient['00100020']?.Value?.[0] || `patient_${index}`,
-      name: displayName,
-      patientId: getValue('00100020'), // Patient ID
-      sex: getValue('00100040'), // Patient Sex
+      id: getValue('00100020') || `patient_${index}`,
+      name: displayName || 'Unknown',
+      patientId: getValue('00100020'),
+      sex: getValue('00100040'),
       birthDate: formattedBirthDate,
       studies: patient.numberOfStudies || 0,
-      issuer: getValue('00100021'), // Issuer of Patient ID
-      verificationStatus: getValue('00101024'), // Patient Verification Status
-      rawData: patient, // Keep raw data for detailed view
+      issuer: getValue('00100021'),
+      verificationStatus: getValue('00101024'),
+      rawData: patient,
     };
   });
 };
 
 /**
- * Fetch studies for a specific patient
- * @param {string} patientId - The patient ID
- * @returns {Promise<Array>} - Array of study records
+ * Transform DICOM study data to UI-friendly format
+ * @param {Array} dicomData - Raw DICOM study data
+ * @returns {Array} - Transformed study data
  */
-export const fetchPatientStudies = async (patientId) => {
+const transformStudyData = (dicomData) => {
+  if (!Array.isArray(dicomData)) {
+    console.warn('Expected array but got:', typeof dicomData);
+    return [];
+  }
+
+  return dicomData.map((study, index) => {
+    const getValue = (tag, vr = 'Value', idx = 0) => {
+      return study[tag]?.[vr]?.[idx] || '';
+    };
+
+    // Extract patient name
+    const patientName = getValue('00100010', 'Value', 0)?.Alphabetic || '';
+    const nameParts = patientName.split('^');
+    const displayName = nameParts.length > 1 
+      ? `${nameParts[1]} ${nameParts[0]}` 
+      : patientName;
+
+    // Extract and format study date
+    const studyDate = getValue('00080020');
+    const formattedDate = studyDate && studyDate.length === 8
+      ? `${studyDate.slice(0, 4)}-${studyDate.slice(4, 6)}-${studyDate.slice(6, 8)}`
+      : studyDate;
+
+    // Extract and format study time
+    const studyTime = getValue('00080030');
+    const formattedTime = studyTime && studyTime.length >= 6
+      ? `${studyTime.slice(0, 2)}:${studyTime.slice(2, 4)}:${studyTime.slice(4, 6)}`
+      : studyTime;
+
+    return {
+      id: getValue('0020000D') || `study_${index}`,
+      studyInstanceUID: getValue('0020000D'),
+      patientName: displayName || 'Unknown',
+      patientId: getValue('00100020'),
+      studyDate: formattedDate,
+      studyTime: formattedTime,
+      modality: getValue('00080061'),
+      description: getValue('00081030'),
+      accessionNumber: getValue('00080050'),
+      referringPhysician: getValue('00080090'),
+      numberOfSeries: study.numberOfStudyRelatedSeries || getValue('00201206'),
+      numberOfInstances: study.numberOfStudyRelatedInstances || getValue('00201208'),
+      institutionalDepartmentName: getValue('00081040'),
+      rawData: study,
+    };
+  });
+};
+
+// ============================================================================
+// HEALTH CHECK
+// ============================================================================
+
+/**
+ * Check if API backend is healthy
+ * @returns {Promise<Object>} - Health status
+ */
+export const checkHealth = async () => {
   try {
-    const token = await getToken();
-
-    const response = await fetch(
-      `${API_BASE}/dcm4chee-arc/aets/DCM4CHEE/rs/patients/${patientId}/studies`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
+    const response = await fetch(`${API_BASE.replace('/api', '')}/health`);
+    return await response.json();
   } catch (error) {
-    console.error('Error fetching patient studies:', error);
+    console.error('❌ Health check failed:', error);
     throw error;
   }
 };
