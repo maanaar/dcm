@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import Background from "../components/background.jsx";
 // Dummy account credentials
 const DUMMY_ACCOUNT = {
   email: 'admin@hospital.com',
@@ -67,12 +67,13 @@ export default function LoginPage() {
   return (
     <div className="w-full flex items-center justify-end relative">
       {/* Card */}
+        <Background />
       
-      <div className="flex flex-col min-h-screen space-y-6 w-[40%] justify-center bg-[rgba(255,255,255,0.8)] backdrop-blur-md border shadow-lg rounded-xl p-8 z-10">
-        <span className="flex text-7xl justify-center  text-[rgb(215,160,56)] ">✴</span>
-        <h1 className="text-4xl font-bold text-center">Welcome Again!</h1>
+      <div className="flex flex-col min-h-screen space-y-6 w-[40%] justify-center mr-16  p-10 z-10">
+{/*         <span className="flex text-7xl justify-center  text-[rgb(215,160,56)] ">✴</span> */}
+        <h1 className="text-4xl font-bold text-center text-[#0F172A]">Welcome Again!</h1>
         
-        <h3 className="text-2xl font-semibold text-center">Login</h3>
+        <h3 className="text-2xl font-semibold text-center">Log in</h3>
 
         {/* Demo Credentials Info
         <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-sm">
@@ -89,26 +90,26 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 flex flex-col justify-center">
           <div>
-            <label className="block text-sm text-slate-600 mb-1">Username</label>
+            <label className="block text-sm text-white mb-1">Username</label>
             <input
               type="text"
               placeholder="Enter username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md outline-none focus:ring-2 focus:ring-slate-400"
+              className="w-full px-3 py-2 border rounded-[16px] outline-none focus:ring-2 focus:ring-slate-400"
               required
               disabled={isLoading}
             />
           </div>
 
-          <div>
-            <label className="block text-sm text-slate-600 mb-1">Password</label>
+          <div  className="mt-6">
+            <label className="block text-sm text-white mb-1">Password</label>
             <input
               type="password"
               placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded-md outline-none focus:ring-2 focus:ring-slate-400"
+              className="w-full px-3 py-2 border rounded-[16px] outline-none focus:ring-2 focus:ring-slate-400"
               required
               disabled={isLoading}
             />
@@ -120,10 +121,10 @@ export default function LoginPage() {
               id="rememberMe"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-slate-800 border-gray-300 rounded focus:ring-slate-400"
+              className="w-4 h-4 text-slate-800 border-gray-300 accent-[#076371] rounded focus:ring-slate-400"
               disabled={isLoading}
             />
-            <label htmlFor="rememberMe" className="ml-2 text-sm text-slate-600">
+            <label htmlFor="rememberMe" className="ml-2 text-[13px] text-white">
               Remember me
             </label>
           </div>
@@ -131,9 +132,9 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-4 bg-slate-800 text-white py-2 rounded-md hover:bg-slate-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-[25%] mx-auto mt-4 bg-[#076371] text-white py-2 px-3 rounded-full hover:bg-slate-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Signing In...' : 'Sign In'}
+            {isLoading ? 'Signing In...' : 'Log In'}
           </button>
         </form>
       </div>
