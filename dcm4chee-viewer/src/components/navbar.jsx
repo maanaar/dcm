@@ -1,36 +1,41 @@
 import { NavLink } from "react-router-dom";
 
 const navItems = [
-  { name: "Patients", path: "/patients" },
-  { name: "Studies", path: "/studies" },
-  { name: "MWL", path: "/mwl" },
-  { name: "MPPS", path: "/mpps" },
-  { name: "Work Items", path: "/work-items" },
-  { name: "Compare", path: "/compare" },
-  { name: "Dashboard", path: "/dashboard" },
+  {
+    name: "Patients", path: "/patients", iconClass: "fa-solid fa-hospital-user"
+  },
+  { name: "Studies", path: "/studies", iconClass: "fa-solid fa-book-open-reader"},
+  { name: "MWL", path: "/mwl", iconClass: "fa-solid fa-user-check" },
+  // { name: "MPPS", path: "/mpps", iconClass: "fa-solid fa-hospital-user" },
+  // { name: "Work Items", path: "/work-items", iconClass: "fa-solid fa-hospital-user" },
+  // { name: "Compare", path: "/compare", iconClass: "fa-solid fa-hospital-user" },
+  { name: "Dashboard", path: "/dashboard", iconClass: "fa-solid fa-table-columns" },
 ];
 
 export default function Navbar() {
   return (
-    <div className="sticky top-0 z-50 w-full bg-white/70 backdrop-blur-md border-b">
-      <div className="h-14 w-full flex items-center px-6 gap-4">
-        <button className="text-xl">☰</button>
-
+    <div className="sticky top-0 z-50 w-[max-content] rounded-r-lg h-screen bg-white/70 backdrop-blur-md border-b bg-[linear-gradient(-90deg,#FFFFFF_0%,#D9E4EF_90%)]">
+      <div className=" flex flex-col  px-10 gap-4">
+{/*         <button className="text-xl">☰</button> */}
+        <img src="/logoSide.png" alt="Logo" className="w-52 mx-auto mb-4 mt-8" />
+        <div className="flex flex-col gap-8 mt-10">
         {navItems.map((item) => (
           <NavLink
             key={item.name}
             to={item.path}
             className={({ isActive }) =>
-              `px-3 py-1 rounded-md text-sm ${
+              `px-3 py-1 rounded-md text-[20px]  ${
                 isActive
-                  ? "bg-slate-200 font-semibold"
-                  : "text-slate-600 hover:text-slate-900"
+                  ? "bg-[#14A3B8] text-white font-semibold hover:text-white hover:bg[#07626f]"
+                  : "text-[#14A3B8] hover:text-[#07626f]"
               }`
             }
           >
+            <i className={`${item.iconClass} mr-7 text-[16px]`}></i>
             {item.name}
           </NavLink>
         ))}
+          </div>
       </div>
     </div>
   );
