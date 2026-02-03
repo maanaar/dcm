@@ -15,7 +15,7 @@ function AppContent() {
     <div className="relative flex flex-col w-full min-h-screen">
       <Background />
 
-      <div className="relative z-10 flex flex-col w-full flex-1">
+      <div className="relative z-10 flex  w-full flex-1">
         {!hideNavbar && <Navbar />}
 
         <main className="w-full flex-1">
