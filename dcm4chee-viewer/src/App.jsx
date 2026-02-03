@@ -5,14 +5,14 @@ import Navbar from "./components/navbar.jsx";
 import StudiesPage from "./pages/studies.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import DashboardPage from "./pages/DCMDashboard.jsx";
-
+import Background from "./components/background.jsx";
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname === "/login";
 
   return (
     <div className="relative flex flex-col w-full min-h-screen">
-
+    <Background />
 
       <div className="relative z-10 flex flex-col w-full flex-1">
         {!hideNavbar && <Navbar />}
