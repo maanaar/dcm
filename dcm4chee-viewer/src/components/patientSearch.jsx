@@ -310,7 +310,7 @@ export default function PatientSearch() {
       {/* Search Results */}
       {searchResults.length > 0 && (
         <div className="bg-white  rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-slate-800 text-white">
+          <div className="px-6 py-4 bg-[#0a6e79] text-white">
             <h2 className="text-xl font-bold">Search Results ({searchResults.length})</h2>
           </div>
           
@@ -343,7 +343,7 @@ export default function PatientSearch() {
                     <td className="px-6 py-4 text-sm">
                       <button 
                         onClick={() => navigate(`/studies?patientId=${patient.patientId}`)}
-                        className="px-3 py-1 bg-slate-800 text-white rounded hover:bg-slate-900 transition"
+                        className="px-3 py-1 bg-[#0a6e79] text-white rounded-2xl  hover:bg-[#05383d] transition"
                       >
                         View Studies
                       </button>
