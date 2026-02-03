@@ -60,15 +60,15 @@ export default function PatientSearch() {
   };
 
   return ( 
-    <div className="w-full bg-white/80 backdrop-blur-md border shadow">
+    <div className=" wallpaper-page w-full bg-white/50  rounded-2xl  backdrop-blur-md border shadow" >
       {/* Header */}
       <div className="flex gap-2 px-6 py-3 border-b">
-        <span className="text-2xl text-[rgb(215,160,56)]">✴</span>
-        <h2 className="text-2xl font-semibold">Patients</h2>
+        <span className="text-2xl text-[rgb(215,160,56)]">  <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" /></span>
+        <h2 className="text-2xl  mt-2  font-semibold">Patients</h2>
       </div>
 
       {/* Search Form */}
-      <div className="bg-white rounded-xl shadow-lg p-6 mx-auto mb-6">
+      <div className="bg-white/50  rounded-xl  shadow-lg p-6 mx-auto mb-6" >
         <form onSubmit={handleSubmit}>
           {/* Basic Search Fields */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
