@@ -190,7 +190,7 @@ export default function PatientSearch() {
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="mb-4 px-4 py-2 bg-slate-800 text-white rounded-2xl  hover:bg-[#05383d]  transition flex items-center gap-2 bg-[#0a6e79]"
+            className="mb-4 px-4 py-2  text-white rounded-2xl  hover:bg-[#05383d]  transition flex items-center gap-2 bg-[#0a6e79]"
           >
             {showAdvanced ? '▲ Close More Filters' : '▼ More Filters'}
           </button>
@@ -279,7 +279,7 @@ export default function PatientSearch() {
             <button
               type="submit"
               disabled={isSearching}
-              className="px-8 py-3 bg-slate-800 text-white rounded-2xl hover:bg-[#05383d] transition disabled:opacity-50 disabled:cursor-not-allowed bg-[#0a6e79]"
+              className="px-8 py-3   text-white rounded-2xl hover:bg-[#05383d] transition disabled:opacity-50 disabled:cursor-not-allowed bg-[#0a6e79]"
             >
               {isSearching ? 'Searching...' : 'SUBMIT'}
             </button>
