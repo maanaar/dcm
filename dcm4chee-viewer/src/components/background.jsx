@@ -8,7 +8,7 @@ export default function Background() {
       {/* background image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: "url('/bg.jpeg')" }}
+        style={{ backgroundImage: "url('/curalink-login-bg.svg')" }}
       />
 
       {/* white blur overlay */}
