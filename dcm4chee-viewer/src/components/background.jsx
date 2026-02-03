@@ -4,7 +4,7 @@ export default function Background() {
   const location = useLocation();
   const hideNavbar = location.pathname === "/login";
   const loginBg = "/curalink-login-bg.svg";
-  const defaultBg = "/bg.jpeg";
+  const defaultBg = "/bg2.png";
   return (
     <div className="fixed inset-0 -z-50">
       {/* background image */}

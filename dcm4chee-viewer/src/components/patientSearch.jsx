@@ -74,7 +74,7 @@ export default function PatientSearch() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Patient Family Name */}
             <div>
-              <label className="block text-sm text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2">
                 Patient Family Name
               </label>
               <div className="relative">
@@ -84,7 +84,8 @@ export default function PatientSearch() {
                   value={formData.patientFamilyName}
                   onChange={handleInputChange}
                   placeholder="Enter family name"
-                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]  "
+
                 />
                 <label className="absolute right-3 top-2 flex items-center text-sm text-slate-500">
                   <input
@@ -92,7 +93,7 @@ export default function PatientSearch() {
                     name="fuzzyMatching"
                     checked={formData.fuzzyMatching}
                     onChange={handleInputChange}
-                    className="mr-2"
+                    className="mr-2  accent-[#0a6e79]"
                   />
                   Fuzzy
                 </label>
@@ -101,7 +102,7 @@ export default function PatientSearch() {
 
             {/* Patient ID */}
             <div>
-              <label className="block text-sm text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2">
                 Patient ID
               </label>
               <input
@@ -110,13 +111,13 @@ export default function PatientSearch() {
                 value={formData.patientId}
                 onChange={handleInputChange}
                 placeholder="Enter patient ID"
-                className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
               />
             </div>
 
             {/* Issuer of Patient */}
             <div>
-              <label className="block text-sm text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2">
                 Issuer of Patient
               </label>
               <input
@@ -125,7 +126,7 @@ export default function PatientSearch() {
                 value={formData.issuerOfPatient}
                 onChange={handleInputChange}
                 placeholder="Enter issuer"
-                className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
               />
             </div>
           </div>
@@ -134,7 +135,7 @@ export default function PatientSearch() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Limit of Patients */}
             <div>
-              <label className="block text-sm text-slate-600 mb-2">
+              <label className="block text-lg   text-slate-600 mb-2">
                 Limit of Patients
               </label>
               <input
@@ -144,20 +145,20 @@ export default function PatientSearch() {
                 onChange={handleInputChange}
                 min="1"
                 max="100"
-                className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
               />
             </div>
 
             {/* Order By */}
             <div>
-              <label className="block text-sm text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2">
                 Order By
               </label>
               <select
                 name="orderBy"
                 value={formData.orderBy}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
               >
                 <option value="PatientName">Patient Name</option>
                 <option value="PatientID">Patient ID</option>
@@ -169,14 +170,14 @@ export default function PatientSearch() {
 
             {/* Web App Service */}
             <div>
-              <label className="block text-sm text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2">
                 Web App Service
               </label>
               <select
                 name="webAppService"
                 value={formData.webAppService}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
               >
                 <option value="dcm4chee-arc">dcm4chee-arc</option>
                 <option value="orthanc">Orthanc</option>
@@ -189,7 +190,7 @@ export default function PatientSearch() {
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="mb-4 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition flex items-center gap-2"
+            className="mb-4 px-4 py-2 bg-slate-800 text-white rounded-2xl  hover:bg-[#05383d]  transition flex items-center gap-2 bg-[#0a6e79]"
           >
             {showAdvanced ? '▲ Close More Filters' : '▼ More Filters'}
           </button>
@@ -274,11 +275,11 @@ export default function PatientSearch() {
           )}
 
           {/* Submit and Clear Buttons */}
-          <div className="flex gap-3">
+          <div className="flex  flex-row-reverse  gap-3">
             <button
               type="submit"
               disabled={isSearching}
-              className="px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-8 py-3 bg-slate-800 text-white rounded-2xl hover:bg-[#05383d] transition disabled:opacity-50 disabled:cursor-not-allowed bg-[#0a6e79]"
             >
               {isSearching ? 'Searching...' : 'SUBMIT'}
             </button>
@@ -308,7 +309,7 @@ export default function PatientSearch() {
 
       {/* Search Results */}
       {searchResults.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-white  rounded-xl shadow-lg overflow-hidden">
           <div className="px-6 py-4 bg-slate-800 text-white">
             <h2 className="text-xl font-bold">Search Results ({searchResults.length})</h2>
           </div>
@@ -357,7 +358,7 @@ export default function PatientSearch() {
 
       {/* Empty State */}
       {searchResults.length === 0 && !isSearching && !error && (
-        <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+        <div className="bg-white/50  rounded-xl shadow-lg p-12 text-center">
           <div className="text-6xl mb-4">🔍</div>
           <h3 className="text-xl font-semibold text-slate-700 mb-2">No Results Yet</h3>
           <p className="text-slate-600">Enter search criteria and click SUBMIT to find patients</p>
