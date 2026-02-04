@@ -64,7 +64,7 @@ export default function PatientSearch() {
       {/* Header */}
       <div className="flex gap-2 px-6 py-3 border-b">
         <span className="text-2xl text-[rgb(215,160,56)]">  <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" /></span>
-        <h2 className="text-2xl  mt-2  font-semibold">Patients</h2>
+        <h2 className="text-2xl  mt-2  font-semibold font-[montserrat]">Patients</h2>
       </div>
 
       {/* Search Form */}
@@ -74,7 +74,7 @@ export default function PatientSearch() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Patient Family Name */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]">
                 Patient Family Name
               </label>
               <div className="relative">
@@ -84,7 +84,7 @@ export default function PatientSearch() {
                   value={formData.patientFamilyName}
                   onChange={handleInputChange}
                   placeholder="Enter family name"
-                  className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]  "
+                  className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]  "
 
                 />
                 <label className="absolute right-3 top-2 flex items-center text-sm text-slate-500">
@@ -102,7 +102,7 @@ export default function PatientSearch() {
 
             {/* Patient ID */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]">
                 Patient ID
               </label>
               <input
@@ -111,13 +111,13 @@ export default function PatientSearch() {
                 value={formData.patientId}
                 onChange={handleInputChange}
                 placeholder="Enter patient ID"
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               />
             </div>
 
             {/* Issuer of Patient */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]">
                 Issuer of Patient
               </label>
               <input
@@ -126,7 +126,7 @@ export default function PatientSearch() {
                 value={formData.issuerOfPatient}
                 onChange={handleInputChange}
                 placeholder="Enter issuer"
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               />
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function PatientSearch() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Limit of Patients */}
             <div>
-              <label className="block text-lg   text-slate-600 mb-2">
+              <label className="block text-lg   text-slate-600 mb-2 font-[lato]">
                 Limit of Patients
               </label>
               <input
@@ -145,20 +145,20 @@ export default function PatientSearch() {
                 onChange={handleInputChange}
                 min="1"
                 max="100"
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               />
             </div>
 
             {/* Order By */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]">
                 Order By
               </label>
               <select
                 name="orderBy"
                 value={formData.orderBy}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               >
                 <option value="PatientName">Patient Name</option>
                 <option value="PatientID">Patient ID</option>
@@ -170,14 +170,14 @@ export default function PatientSearch() {
 
             {/* Web App Service */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]" >
                 Web App Service
               </label>
               <select
                 name="webAppService"
                 value={formData.webAppService}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               >
                 <option value="dcm4chee-arc">dcm4chee-arc</option>
                 <option value="orthanc">Orthanc</option>
@@ -190,7 +190,7 @@ export default function PatientSearch() {
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="mb-4 px-4 py-2  text-white rounded-2xl  hover:bg-[#05383d]  transition flex items-center gap-2 bg-[#0a6e79]"
+            className="mb-4 px-4 py-2  text-white rounded-2xl  hover:bg-[#05383d]  transition flex items-center gap-2 bg-[#0a6e79] focus:ring-2 focus:ring-[#00768317]-500"
           >
             {showAdvanced ? '▲ Close More Filters' : '▼ More Filters'}
           </button>
@@ -200,14 +200,14 @@ export default function PatientSearch() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 p-4 bg-slate-50 rounded-lg">
               {/* Patient's Sex */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-slate-600 mb-2 font-[lato]">
                   Patient's Sex
                 </label>
                 <select
                   name="patientSex"
                   value={formData.patientSex}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#00768317]-500"
                 >
                   <option value="">All</option>
                   <option value="M">Male</option>
@@ -218,7 +218,7 @@ export default function PatientSearch() {
 
               {/* Birth Date */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-slate-600 mb-2 font-[lato]">
                   Birth Date
                 </label>
                 <input
@@ -226,20 +226,20 @@ export default function PatientSearch() {
                   name="birthDate"
                   value={formData.birthDate}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#00768317]-500"
                 />
               </div>
 
               {/* Verification Status */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-slate-600 mb-2 font-[lato]">
                   Verification Status
                 </label>
                 <select
                   name="verificationStatus"
                   value={formData.verificationStatus}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#00768317]-500"
                 >
                   <option value="">All</option>
                   <option value="VERIFIED">Verified</option>
@@ -250,7 +250,7 @@ export default function PatientSearch() {
 
               {/* Checkboxes */}
               <div className="flex flex-col gap-3">
-                <label className="flex items-center text-sm text-slate-600">
+                <label className="flex items-center text-sm text-slate-600 font-[lato]">
                   <input
                     type="checkbox"
                     name="onlyWithStudies"
@@ -260,7 +260,7 @@ export default function PatientSearch() {
                   />
                   Only with Studies
                 </label>
-                <label className="flex items-center text-sm text-slate-600">
+                <label className="flex items-center text-sm text-slate-600 font-[lato]">
                   <input
                     type="checkbox"
                     name="mergedPatients"
@@ -279,7 +279,7 @@ export default function PatientSearch() {
             <button
               type="submit"
               disabled={isSearching}
-              className="px-8 py-3   text-white rounded-2xl hover:bg-[#05383d] transition disabled:opacity-50 disabled:cursor-not-allowed bg-[#0a6e79]"
+              className="px-8 py-2 text-white rounded-2xl hover:bg-[#05383d] transition disabled:opacity-50 disabled:cursor-not-allowed bg-[#0a6e79]"
             >
               {isSearching ? 'Searching...' : 'SUBMIT'}
             </button>
@@ -310,7 +310,7 @@ export default function PatientSearch() {
       {/* Search Results */}
       {searchResults.length > 0 && (
         <div className="bg-white  rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-slate-800 text-white">
+          <div className="px-6 py-4 bg-[#0a6e79] text-white">
             <h2 className="text-xl font-bold">Search Results ({searchResults.length})</h2>
           </div>
           
@@ -343,7 +343,7 @@ export default function PatientSearch() {
                     <td className="px-6 py-4 text-sm">
                       <button 
                         onClick={() => navigate(`/studies?patientId=${patient.patientId}`)}
-                        className="px-3 py-1 bg-slate-800 text-white rounded hover:bg-slate-900 transition"
+                        className="px-3 py-1 bg-[#0a6e79] text-white rounded-2xl  hover:bg-[#05383d] transition"
                       >
                         View Studies
                       </button>

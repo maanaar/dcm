@@ -125,56 +125,64 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-4xl font-bold text-[rgb(45,97,135)]">Hospital Dashboard</h1>
-              <p className="text-black-600 mt-2">DICOM Network Management System</p>
+{/*               <h1 className="text-4xl font-bold text-[rgb(45,97,135)]">Hospital Dashboard</h1> */}
+{/*               <p className="text-black-600 mt-2">DICOM Network Management System</p> */}
               {currentUser && (
                 <p className="text-sm text-black-500 mt-1">
                   Welcome, {currentUser.name} ({currentUser.role})
                 </p>
               )}
             </div>
-            <button
-              onClick={() => logout() || navigate('/login')}
-              className="px-4 py-2 bg-black-800 text-white rounded-lg hover:bg-black-900 transition"
-            >
-              Logout
-            </button>
+{/*             <button */}
+{/*               onClick={() => logout() || navigate('/login')} */}
+{/*               className="px-4 py-2 bg-black-800 text-white rounded-lg hover:bg-black-900 transition" */}
+{/*             > */}
+{/*               Logout */}
+{/*             </button> */}
           </div>
 
+      {/* Header */}
+          <div className=" wallpaper-page w-full bg-white/50  rounded-2xl  backdrop-blur-md border shadow" >
+      <div className="flex gap-2 px-6 py-3 border-b">
+        <span className="text-2xl text-[rgb(215,160,56)]">  <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" /></span>
+        <h2 className="text-2xl  mt-2  font-semibold font-[montserrat]">Hospital Dashboard</h2>
+      </div>
+
           {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-black-500">
-              <p className="text-sm text-black-600">Total Hospitals</p>
+          <div className="grid grid-cols-1 md:grid-cols-3  px-4 py-2 gap-4 mb-2">
+            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#31B6C5]">
+              <p className="text-sm text-black-600  font-semibold font-[montserrat] ">Total Hospitals</p>
               <p className="text-3xl font-bold text-black-800">{hospitals.length}</p>
               <p className="text-xs text-black-600 mt-1">{activeHospitals} Active</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-black-500">
-              <p className="text-sm text-black-600">Total Beds</p>
-              <p className="text-3xl font-bold text-black-800">{totalBeds.toLocaleString()}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-              <p className="text-sm text-black-600">Total Patients</p>
+{/*             <div className="bg-white rounded-lg shadow p-4 border-l-4 border-black-500"> */}
+{/*               <p className="text-sm text-black-600">Total Beds</p> */}
+{/*               <p className="text-3xl font-bold text-black-800">{totalBeds.toLocaleString()}</p> */}
+{/*             </div> */}
+            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#1E7586]">
+              <p className="text-sm text-black-600 font-semibold font-[montserrat]">Total Patients</p>
               <p className="text-3xl font-bold text-black-800">{totalPatients.toLocaleString()}</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-orange-500">
-              <p className="text-sm text-black-600">Total Studies</p>
+            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#2F545B]">
+              <p className="text-sm text-black-600 font-semibold font-[montserrat]">Total Studies</p>
               <p className="text-3xl font-bold text-black-800">{totalStudies.toLocaleString()}</p>
             </div>
           </div>
 
           {/* Search and Filter */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <div className="flex flex-col md:flex-row gap-4 mb-4 px-4 py-2">
             <input
+
               type="text"
               placeholder="Search hospitals..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-black-500"
+              className="flex-1 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-black-500 "
             />
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              className="px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-black-500"
+              className="px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-black-500 "
             >
               {hospitalTypes.map(type => (
                 <option key={type} value={type}>
@@ -184,7 +192,8 @@ export default function DashboardPage() {
             </select>
           </div>
         </div>
-
+                     </div>
+          <div className=" wallpaper-page w-full bg-white/50  rounded-2xl  backdrop-blur-md border shadowp-4    p-4    " >
         {/* Hospital Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredHospitals.map(hospital => (
@@ -213,40 +222,40 @@ export default function DashboardPage() {
 
               {/* Hospital Info */}
               <div className="p-6">
-                <h3 className="text-xl font-bold text-black-800 mb-2">{hospital.name}</h3>
+                <h3 className="text-xl font-bold text-black-800 mb-2 font-[montserrat]">{hospital.name}</h3>
                 <p className="text-sm text-black-600 mb-1">📍 {hospital.location}</p>
                 <p className="text-sm text-black-600 mb-4">{hospital.type}</p>
 
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   <div className="text-center bg-black-50 rounded p-2">
-                    <p className="text-xs text-black-600">Beds</p>
+                    <p className="text-sm text-black-600 font-[lato]">Beds</p>
                     <p className="text-lg font-bold text-black-800">{hospital.beds}</p>
                   </div>
                   <div className="text-center bg-black-50 rounded p-2">
-                    <p className="text-xs text-black-600">Patients</p>
+                    <p className="text-sm text-black-600 font-[lato]">Patients</p>
                     <p className="text-lg font-bold text-black-800">{hospital.patients}</p>
                   </div>
                   <div className="text-center bg-black-50 rounded p-2">
-                    <p className="text-xs text-black-600">Studies</p>
+                    <p className="text-sm text-black-600 font-[lato]">Studies</p>
                     <p className="text-lg font-bold text-black-800">{hospital.studies}</p>
                   </div>
                 </div>
 
                 {/* Departments */}
                 <div className="mb-4">
-                  <p className="text-xs text-black-600 mb-2">Departments:</p>
+                  <p className=" font-semibold text-sm text-black-600 mb-2 font-[montserrat]" >Departments:</p>
                   <div className="flex flex-wrap gap-1">
                     {hospital.departments.slice(0, 3).map((dept, idx) => (
                       <span
                         key={idx}
-                        className="text-xs bg-black-100 text-black-800 px-2 py-1 rounded"
+                        className="text-sm bg-black-100 text-black-800 px-2 py-1 rounded"
                       >
                         {dept}
                       </span>
                     ))}
                     {hospital.departments.length > 3 && (
-                      <span className="text-xs bg-black-100 text-black-600 px-2 py-1 rounded">
+                      <span className="text-sm bg-black-100 text-black-600 px-2 py-1 rounded font-[lato]">
                         +{hospital.departments.length - 3}
                       </span>
                     )}
@@ -255,12 +264,12 @@ export default function DashboardPage() {
 
                 {/* Modalities */}
                 <div>
-                  <p className="text-xs text-black-600 mb-2">Modalities:</p>
+                  <p className="font-semibold text-sm text-black-600 mb-2 font-[montserrat]">Modalities:</p>
                   <div className="flex flex-wrap gap-1">
                     {hospital.modalities.map((modality, idx) => (
                       <span
                         key={idx}
-                        className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded"
+                        className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded"
                       >
                         {modality}
                       </span>
@@ -269,18 +278,19 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Action Button */}
-                <button className="w-full mt-4 bg-black-800 text-white py-2 rounded-lg hover:bg-black-900 transition">
-                  View Details
-                </button>
+{/*                 <button className="w-full mt-4 bg-black-800 text-white py-2 rounded-lg hover:bg-black-900 transition"> */}
+{/*                   View Details */}
+{/*                 </button> */}
               </div>
             </div>
           ))}
         </div>
+</div>
 
         {/* No Results */}
         {filteredHospitals.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-black-600 text-lg">No hospitals found matching your criteria.</p>
+            <p className="text-black-600 text-lg font-[montserrat]">No hospitals found matching your criteria.</p>
           </div>
         )}
       </div>

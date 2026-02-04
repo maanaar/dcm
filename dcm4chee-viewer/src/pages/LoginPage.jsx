@@ -71,9 +71,9 @@ export default function LoginPage() {
       
       <div className="flex flex-col min-h-screen space-y-6 w-[40%] justify-center mr-16  p-10 z-10">
 {/*         <span className="flex text-7xl justify-center  text-[rgb(215,160,56)] ">✴</span> */}
-        <h1 className="text-4xl font-bold text-center text-[#0F172A]">Welcome Again!</h1>
+        <h1 className="text-5xl font-bold text-center text-white">Welcome Again!</h1>
         
-        <h3 className="text-2xl font-semibold text-center">Log in</h3>
+        <h3 className="text-3xl font-semibold text-white text-center">Log in</h3>
 
         {/* Demo Credentials Info
         <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-sm">
@@ -90,7 +90,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 flex flex-col justify-center">
           <div>
-            <label className="block text-sm text-white mb-1">Username</label>
+            <label className="block text-xl text-white mb-1">Username</label>
             <input
               type="text"
               placeholder="Enter username"
@@ -103,7 +103,7 @@ export default function LoginPage() {
           </div>
 
           <div  className="mt-6">
-            <label className="block text-sm text-white mb-1">Password</label>
+            <label className="block text-xl text-white mb-1">Password</label>
             <input
               type="password"
               placeholder="Enter password"
@@ -124,7 +124,7 @@ export default function LoginPage() {
               className="w-4 h-4 text-slate-800 border-gray-300 accent-[#076371] rounded focus:ring-slate-400"
               disabled={isLoading}
             />
-            <label htmlFor="rememberMe" className="ml-2 text-[13px] text-white">
+            <label htmlFor="rememberMe" className="ml-2 text-sm text-white">
               Remember me
             </label>
           </div>
