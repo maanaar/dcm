@@ -84,7 +84,7 @@ export default function PatientSearch() {
                   value={formData.patientFamilyName}
                   onChange={handleInputChange}
                   placeholder="Enter family name"
-                  className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]  "
+                  className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]  "
 
                 />
                 <label className="absolute right-3 top-2 flex items-center text-sm text-slate-500">
@@ -111,7 +111,7 @@ export default function PatientSearch() {
                 value={formData.patientId}
                 onChange={handleInputChange}
                 placeholder="Enter patient ID"
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               />
             </div>
 
@@ -126,7 +126,7 @@ export default function PatientSearch() {
                 value={formData.issuerOfPatient}
                 onChange={handleInputChange}
                 placeholder="Enter issuer"
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               />
             </div>
           </div>
@@ -145,7 +145,7 @@ export default function PatientSearch() {
                 onChange={handleInputChange}
                 min="1"
                 max="100"
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               />
             </div>
 
@@ -158,7 +158,7 @@ export default function PatientSearch() {
                 name="orderBy"
                 value={formData.orderBy}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               >
                 <option value="PatientName">Patient Name</option>
                 <option value="PatientID">Patient ID</option>
@@ -177,7 +177,7 @@ export default function PatientSearch() {
                 name="webAppService"
                 value={formData.webAppService}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317]"
               >
                 <option value="dcm4chee-arc">dcm4chee-arc</option>
                 <option value="orthanc">Orthanc</option>
@@ -190,7 +190,7 @@ export default function PatientSearch() {
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="mb-4 px-4 py-2  text-white rounded-2xl  hover:bg-[#05383d]  transition flex items-center gap-2 bg-[#0a6e79]"
+            className="mb-4 px-4 py-2  text-white rounded-2xl  hover:bg-[#05383d]  transition flex items-center gap-2 bg-[#0a6e79] focus:ring-2 focus:ring-[#00768317]-500"
           >
             {showAdvanced ? '▲ Close More Filters' : '▼ More Filters'}
           </button>
@@ -207,7 +207,7 @@ export default function PatientSearch() {
                   name="patientSex"
                   value={formData.patientSex}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#00768317]-500"
                 >
                   <option value="">All</option>
                   <option value="M">Male</option>
@@ -226,7 +226,7 @@ export default function PatientSearch() {
                   name="birthDate"
                   value={formData.birthDate}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#00768317]-500"
                 />
               </div>
 
@@ -239,7 +239,7 @@ export default function PatientSearch() {
                   name="verificationStatus"
                   value={formData.verificationStatus}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-[#00768317]-500"
                 >
                   <option value="">All</option>
                   <option value="VERIFIED">Verified</option>
