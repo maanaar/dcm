@@ -64,7 +64,7 @@ export default function PatientSearch() {
       {/* Header */}
       <div className="flex gap-2 px-6 py-3 border-b">
         <span className="text-2xl text-[rgb(215,160,56)]">  <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" /></span>
-        <h2 className="text-2xl  mt-2  font-semibold">Patients</h2>
+        <h2 className="text-2xl  mt-2  font-semibold font-[montserrat]">Patients</h2>
       </div>
 
       {/* Search Form */}
@@ -74,7 +74,7 @@ export default function PatientSearch() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Patient Family Name */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]">
                 Patient Family Name
               </label>
               <div className="relative">
@@ -102,7 +102,7 @@ export default function PatientSearch() {
 
             {/* Patient ID */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]">
                 Patient ID
               </label>
               <input
@@ -117,7 +117,7 @@ export default function PatientSearch() {
 
             {/* Issuer of Patient */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]">
                 Issuer of Patient
               </label>
               <input
@@ -135,7 +135,7 @@ export default function PatientSearch() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Limit of Patients */}
             <div>
-              <label className="block text-lg   text-slate-600 mb-2">
+              <label className="block text-lg   text-slate-600 mb-2 font-[lato]">
                 Limit of Patients
               </label>
               <input
@@ -151,7 +151,7 @@ export default function PatientSearch() {
 
             {/* Order By */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]">
                 Order By
               </label>
               <select
@@ -170,7 +170,7 @@ export default function PatientSearch() {
 
             {/* Web App Service */}
             <div>
-              <label className="block text-lg  text-slate-600 mb-2">
+              <label className="block text-lg  text-slate-600 mb-2 font-[lato]" >
                 Web App Service
               </label>
               <select
@@ -200,7 +200,7 @@ export default function PatientSearch() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 p-4 bg-slate-50 rounded-lg">
               {/* Patient's Sex */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-slate-600 mb-2 font-[lato]">
                   Patient's Sex
                 </label>
                 <select
@@ -218,7 +218,7 @@ export default function PatientSearch() {
 
               {/* Birth Date */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-slate-600 mb-2 font-[lato]">
                   Birth Date
                 </label>
                 <input
@@ -232,7 +232,7 @@ export default function PatientSearch() {
 
               {/* Verification Status */}
               <div>
-                <label className="block text-sm text-slate-600 mb-2">
+                <label className="block text-sm text-slate-600 mb-2 font-[lato]">
                   Verification Status
                 </label>
                 <select
@@ -250,7 +250,7 @@ export default function PatientSearch() {
 
               {/* Checkboxes */}
               <div className="flex flex-col gap-3">
-                <label className="flex items-center text-sm text-slate-600">
+                <label className="flex items-center text-sm text-slate-600 font-[lato]">
                   <input
                     type="checkbox"
                     name="onlyWithStudies"
@@ -260,7 +260,7 @@ export default function PatientSearch() {
                   />
                   Only with Studies
                 </label>
-                <label className="flex items-center text-sm text-slate-600">
+                <label className="flex items-center text-sm text-slate-600 font-[lato]">
                   <input
                     type="checkbox"
                     name="mergedPatients"
