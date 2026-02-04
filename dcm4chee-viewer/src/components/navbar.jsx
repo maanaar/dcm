@@ -26,7 +26,7 @@ export default function Navbar() {
             className={({ isActive }) =>
               `px-3 py-1 rounded-md text-[20px]  ${
                 isActive
-                  ? "bg-[#14A3B8] text-white font-semibold hover:text-white hover:bg[#07626f]"
+                  ? "bg-[#14A3B8] text-white font-semibold hover:text-white hover:bg-[#07626f]"
                   : "text-[#14A3B8] hover:text-[#07626f]"
               }`
             }

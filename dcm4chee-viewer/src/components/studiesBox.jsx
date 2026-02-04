@@ -70,116 +70,207 @@ export default function StudiesBox() {
   };
 
   return (
-    <div className="w-full bg-white/80 backdrop-blur-md border shadow">
+    <div className=" wallpaper-page w-full bg-white/50  rounded-2xl  backdrop-blur-md border shadow">
       {/* Header */}
       <div className="flex gap-2 px-6 py-3 border-b">
-        <span className="text-2xl text-[rgb(215,160,56)]">✴</span>
-        <h2 className="text-2xl font-semibold">Studies</h2>
+        <span className="text-2xl text-[rgb(215,160,56)]"><img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" /></span>
+        <h2 className="text-2xl mt-2 font-semibold">Studies</h2>
       </div>
 
       {/* Search Form */}
+      <div className="bg-white/50  rounded-xl  shadow-lg p-6 mx-auto mb-6" >
       <form onSubmit={handleSubmit}>
         {/* Main Search Fields */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
-          {/* Column 1 - Patient Info */}
-          <div className="space-y-4">
-            <Input
-              label="Patient family name"
-              name="patientFamilyName"
-              value={formData.patientFamilyName}
-              onChange={handleInputChange}
-            />
-            <Input
-              label="Patient ID"
-              name="patientId"
-              value={formData.patientId}
-              onChange={handleInputChange}
-            />
-            <Input
-              label="Accession number"
-              name="accessionNumber"
-              value={formData.accessionNumber}
-              onChange={handleInputChange}
-            />
-            <Checkbox
-              label="Fuzzy Matching"
-              name="fuzzyMatching"
-              checked={formData.fuzzyMatching}
-              onChange={handleInputChange}
-            />
-            <Input
-              label="Issuer of patient"
-              name="issuerOfPatient"
-              value={formData.issuerOfPatient}
-              onChange={handleInputChange}
-            />
-            <Input
-              label="Issuer of accession number"
-              name="issuerOfAccessionNumber"
-              value={formData.issuerOfAccessionNumber}
-              onChange={handleInputChange}
-            />
-          </div>
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+                Patient Family Name
+            </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="patientFamilyName"
+                  value={formData.patientFamilyName}
+                  onChange={handleInputChange}
+                  placeholder="Enter family name"
+                  className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]  "
 
-          {/* Column 2 - Study Info */}
-          <div className="space-y-4">
-            <Input
-              label="Study Description"
+                />
+                <label className="absolute right-3 top-2 flex items-center text-sm text-slate-500">
+                  <input
+                    type="checkbox"
+                    name="fuzzyMatching"
+                    checked={formData.fuzzyMatching}
+                    onChange={handleInputChange}
+                    className="mr-2  accent-[#0a6e79]"
+                  />
+                  Fuzzy Matching
+                </label>
+              </div>
+          
+              
+          </div>
+          <div>
+              <label className="block text-lg  text-slate-600 mb-2">
+               Study Description
+              </label>
+                <input
               name="studyDescription"
               value={formData.studyDescription}
-              onChange={handleInputChange}
-            />
-            <Select
-              label="Modality"
-              name="modality"
-              value={formData.modality}
-              onChange={handleInputChange}
-            />
-            <Input
-              label="Referring physician family"
-              name="referringPhysician"
-              value={formData.referringPhysician}
-              onChange={handleInputChange}
-            />
-            <Input
-              label="Institutional Department Name"
-              name="institutionalDepartmentName"
-              value={formData.institutionalDepartmentName}
-              onChange={handleInputChange}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
           </div>
-
-          {/* Column 3 - Dates & AET */}
-          <div className="space-y-4">
-            <Input
-              label="Sending AET of Series"
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+               Sending AET of Series
+              </label>
+                <input
               name="sendingAET"
               value={formData.sendingAET}
-              onChange={handleInputChange}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
-            <DateInput
-              label="Study date"
+          </div>
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+                Patient ID
+              </label>
+                <input
+              name="patientId"
+              value={formData.patientId}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+            />
+              
+          </div>
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+                Modality
+              </label>
+              <select
+                name="modality"
+                value={formData.modality}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+              >
+                <option value="All">All</option>
+                <option value="CT">CT</option>
+                <option value="MR">MR</option>
+                <option value="US">US</option>
+              <option value="CR">CR</option>
+              <option value="DX">DX</option>
+                <option value="XA">XA</option>
+                <option value="NM">NM</option>
+                <option value="PT">PT</option>
+                <option value="OT">OT</option>
+              </select>
+          </div>
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+               Study date
+              </label>
+            <input
+              type='date'
               name="studyDate"
               value={formData.studyDate}
-              onChange={handleInputChange}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
-            <DateInput
-              label="Study time"
+          </div>
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+                Accession number
+              </label>
+                <input
+              name="accessionNumber"
+              value={formData.accessionNumber}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+            />
+              
+          </div>
+          <div>
+               <label className="block text-lg  text-slate-600 mb-2">
+               Referring physician family
+              </label>
+                <input
+              name="referringPhysician"
+              value={formData.referringPhysician}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+            />
+          </div>
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+               Study time
+              </label>
+            <input
+              type='date'
               name="studyTime"
               value={formData.studyTime}
-              onChange={handleInputChange}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
-            <DateInput
-              label="Study Received"
+          </div>
+            <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+                Issuer of patient
+              </label>
+                <input
+              name="issuerOfPatient"
+              value={formData.issuerOfPatient}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+            />
+              
+          </div>
+          <div>
+                 <label className="block text-lg  text-slate-600 mb-2">
+               Institutional Department Name
+              </label>
+                <input
+              name="institutionalDepartmentName"
+              value={formData.institutionalDepartmentName}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+            />
+           </div>
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+               Study Received
+              </label>
+            <input
+              type='date'
               name="studyReceived"
               value={formData.studyReceived}
-              onChange={handleInputChange}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
-            <DateInput
-              label="Study Access"
+          </div>
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+               Issuer of accession number
+              </label>
+                <input
+              name="issuerOfAccessionNumber"
+              value={formData.issuerOfAccessionNumber}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+            />
+              
+          </div>
+          <div></div>
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+               Study Access
+              </label>
+            <input
+              type='date'
               name="studyAccess"
               value={formData.studyAccess}
-              onChange={handleInputChange}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
           </div>
         </div>
@@ -189,7 +280,7 @@ export default function StudiesBox() {
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="mb-4 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition"
+            className="mb-4 px-4 py-2  text-white rounded-2xl  hover:bg-[#05383d]  transition flex items-center gap-2 bg-[#0a6e79]"
           >
             {showAdvanced ? '▲ Hide Advanced' : '▼ Show Advanced'}
           </button>
@@ -199,19 +290,31 @@ export default function StudiesBox() {
         {showAdvanced && (
           <div className="px-6 pb-6">
             <div className="p-4 bg-slate-50 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
+              <div>
+               <label className="block text-sm text-slate-600 mb-2">
+                  Study Instance UID
+                </label>
+              <input
                 label="Study Instance UID"
                 name="studyInstanceUID"
                 value={formData.studyInstanceUID || ''}
                 onChange={handleInputChange}
-              />
-              <Input
+                className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                 <label className="block text-sm text-slate-600 mb-2">
+                  Limit
+                </label>
+              <input
                 label="Limit"
                 name="limit"
                 type="number"
                 value={formData.limit}
                 onChange={handleInputChange}
-              />
+                className="w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                </div>
             </div>
           </div>
         )}
@@ -222,7 +325,7 @@ export default function StudiesBox() {
             name="orderBy"
             value={formData.orderBy}
             onChange={handleInputChange}
-            className="border px-3 py-2 rounded"
+            className="w-[200px] px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="StudyDate">Study Date</option>
             <option value="-StudyDate">Study Date (Desc)</option>
@@ -235,7 +338,7 @@ export default function StudiesBox() {
             name="webAppService"
             value={formData.webAppService}
             onChange={handleInputChange}
-            className="border px-3 py-2 rounded"
+            className="w-[200px] px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="dcm4chee-arc">dcm4chee-arc</option>
             <option value="orthanc">Orthanc</option>
@@ -246,7 +349,7 @@ export default function StudiesBox() {
             <button
               type="button"
               onClick={handleClearSearch}
-              className="px-6 py-2 bg-slate-200 text-slate-800 rounded hover:bg-slate-300"
+              className="px-8 py-3 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300 transition"
             >
               Clear
             </button>
@@ -255,13 +358,13 @@ export default function StudiesBox() {
           <button
             type="submit"
             disabled={isSearching}
-            className="ml-auto bg-slate-800 text-white px-6 py-2 rounded hover:bg-slate-900 disabled:opacity-50"
+            className="ml-auto px-8 py-3   text-white rounded-2xl hover:bg-[#05383d] transition disabled:opacity-50 disabled:cursor-not-allowed bg-[#0a6e79]"
           >
             {isSearching ? 'Searching...' : 'SUBMIT'}
           </button>
         </div>
       </form>
-
+</div>
       {/* Error Message */}
       {error && (
         <div className="mx-6 mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
@@ -274,7 +377,7 @@ export default function StudiesBox() {
 
       {/* Search Results */}
       {searchResults.length > 0 && (
-        <div className="mx-6 mb-6 bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="bg-white  rounded-xl shadow-lg overflow-hidden">
           <div className="px-6 py-4 bg-slate-800 text-white">
             <h2 className="text-xl font-bold">
               Search Results ({searchResults.length})
@@ -310,7 +413,7 @@ export default function StudiesBox() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {searchResults.map((study, index) => (
-                  <tr key={study.id || index} className="hover:bg-slate-50">
+                  <tr key={study.id || index} className="hover:bg-slate-50 transition">
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">
                       {study.patientName}
                     </td>
@@ -351,7 +454,7 @@ export default function StudiesBox() {
 
       {/* Empty State */}
       {searchResults.length === 0 && !isSearching && !error && (
-        <div className="mx-6 mb-6 bg-white rounded-xl shadow-lg p-12 text-center">
+        <div className=" bg-white/50 rounded-xl shadow-lg p-12 text-center">
           <div className="text-6xl mb-4">🔍</div>
           <h3 className="text-xl font-semibold text-slate-700 mb-2">
             No Results Yet
