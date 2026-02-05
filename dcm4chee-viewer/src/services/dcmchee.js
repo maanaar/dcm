@@ -335,3 +335,105 @@ export const checkHealth = async () => {
     throw error;
   }
 };
+// ============================================================================
+// MWL API
+// ============================================================================
+
+/**
+ * Search MWL (Modality Worklist)
+ * @param {Object} formData
+ * @returns {Promise<Array>}
+ */
+export const searchMWL = async (formData) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    // Patient filters
+    if (formData.patientFamilyName) {
+      queryParams.append("PatientName", formData.patientFamilyName);
+    }
+
+    if (formData.patientId) {
+      queryParams.append("PatientID", formData.patientId);
+    }
+
+    if (formData.accessionNumber) {
+      queryParams.append("AccessionNumber", formData.accessionNumber);
+    }
+
+    if (formData.issuerOfPatient) {
+      queryParams.append("IssuerOfPatientID", formData.issuerOfPatient);
+    }
+
+    // ============================
+    // ✅ MODALITY FILTER (MWL)
+    // ============================
+    if (formData.modality) {
+      queryParams.append(
+        "ScheduledProcedureStepSequence.Modality",
+        formData.modality
+      );
+    }
+
+    // AE Title
+    if (formData.scheduledStationAET) {
+      queryParams.append(
+        "ScheduledProcedureStepSequence.ScheduledStationAETitle",
+        formData.scheduledStationAET
+      );
+    }
+
+    // SPS Start Time
+    if (formData.spsStartTime) {
+      const dicomTime = formData.spsStartTime.replace(/:/g, "");
+      queryParams.append(
+        "ScheduledProcedureStepSequence.ScheduledProcedureStepStartTime",
+        dicomTime
+      );
+    }
+
+    const url = `${API_BASE}/mwl?${queryParams.toString()}`;
+    console.log("🔍 MWL Search:", url);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`MWL search failed: ${err}`);
+    }
+
+    return await response.json();
+
+  } catch (error) {
+    console.error("❌ MWL search error:", error);
+    throw error;
+  }
+};
+
+export const transformMWLData = (dicomData) => {
+  if (!Array.isArray(dicomData)) return [];
+
+  return dicomData.map((item, index) => {
+    const getValue = (obj, tag, vr = "Value", idx = 0) =>
+      obj?.[tag]?.[vr]?.[idx] || "";
+
+    const sps =
+      item["00400100"]?.Value?.[0] || {}; // SPS Sequence
+
+    const patientName =
+      getValue(item, "00100010")?.Alphabetic || "";
+
+    return {
+      id: index,
+      patientName,
+      patientId: getValue(item, "00100020"),
+      accessionNumber: getValue(item, "00080050"),
+      modality: getValue(sps, "00080060"),
+      spsStartDate: getValue(sps, "00400002"),
+      spsStartTime: getValue(sps, "00400003"),
+      stationAET: getValue(sps, "00400001"),
+      description: getValue(sps, "00400007"),
+      rawData: item,
+    };
+  });
+};

@@ -4,23 +4,14 @@ export default {
     "./index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
-
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var( system-ui, Avenir, Helvetica, Arial)', 'sans-serif'],
-      },
-    },  },
-  plugins: [],
-}
-
-module.exports = {
-  theme: {
-    extend: {
-      fontFamily: {
+        sans: ['var(system-ui, Avenir, Helvetica, Arial)', 'sans-serif'],
         montserrat: ['Montserrat', 'sans-serif'],
         lato: ['Lato', 'sans-serif'],
       },
     },
   },
-}
+  plugins: [],
+};
