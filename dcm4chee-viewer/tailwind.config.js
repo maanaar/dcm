@@ -9,18 +9,21 @@ export default {
     extend: {
       fontFamily: {
         sans: ['var( system-ui, Avenir, Helvetica, Arial)', 'sans-serif'],
-      },
-    },  },
-  plugins: [],
-}
-
-module.exports = {
-  theme: {
-    extend: {
-      fontFamily: {
         montserrat: ['Montserrat', 'sans-serif'],
         lato: ['Lato', 'sans-serif'],
       },
     },
   },
+  plugins: [],
 }
+
+// module.exports = {
+//   theme: {
+//     extend: {
+//       fontFamily: {
+//         montserrat: ['Montserrat', 'sans-serif'],
+//         lato: ['Lato', 'sans-serif'],
+//       },
+//     },
+//   },
+// }

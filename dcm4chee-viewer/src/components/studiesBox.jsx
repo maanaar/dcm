@@ -116,6 +116,7 @@ export default function StudiesBox() {
               </label>
                 <input
               name="studyDescription"
+              placeholder="Enter Study Description"
               value={formData.studyDescription}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -127,6 +128,7 @@ export default function StudiesBox() {
               </label>
                 <input
               name="sendingAET"
+              placeholder="Enter Sending AET of Series"
               value={formData.sendingAET}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -138,6 +140,7 @@ export default function StudiesBox() {
               </label>
                 <input
               name="patientId"
+              placeholder="Enter Patient ID"
               value={formData.patientId}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -173,6 +176,7 @@ export default function StudiesBox() {
             <input
               type='date'
               name="studyDate"
+              placeholder="Enter Study date"
               value={formData.studyDate}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -184,6 +188,7 @@ export default function StudiesBox() {
               </label>
                 <input
               name="accessionNumber"
+              placeholder="Enter Accession number"
               value={formData.accessionNumber}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -196,6 +201,7 @@ export default function StudiesBox() {
               </label>
                 <input
               name="referringPhysician"
+              placeholder="Enter Referring physician family"
               value={formData.referringPhysician}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -208,6 +214,7 @@ export default function StudiesBox() {
             <input
               type='date'
               name="studyTime"
+              placeholder="Enter Study time"
               value={formData.studyTime}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -219,6 +226,7 @@ export default function StudiesBox() {
               </label>
                 <input
               name="issuerOfPatient"
+              placeholder="Enter Issuer of patient"
               value={formData.issuerOfPatient}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -231,6 +239,7 @@ export default function StudiesBox() {
               </label>
                 <input
               name="institutionalDepartmentName"
+              placeholder="Enter Institutional Department Name"
               value={formData.institutionalDepartmentName}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -243,6 +252,7 @@ export default function StudiesBox() {
             <input
               type='date'
               name="studyReceived"
+              placeholder="Enter Study Received"
               value={formData.studyReceived}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
@@ -254,6 +264,7 @@ export default function StudiesBox() {
               </label>
                 <input
               name="issuerOfAccessionNumber"
+              placeholder="Enter Issuer of accession number"
               value={formData.issuerOfAccessionNumber}
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
