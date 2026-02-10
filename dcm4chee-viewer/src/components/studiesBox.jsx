@@ -15,9 +15,11 @@ export default function StudiesBox() {
     issuerOfAccessionNumber: '',
     studyDescription: '',
     modality: '',
+    reportStatus: '',
     referringPhysician: '',
     institutionalDepartmentName: '',
     sendingAET: '',
+    institutionalName: '',
     studyDate: '',
     studyTime: '',
     studyReceived: '',
@@ -81,59 +83,37 @@ export default function StudiesBox() {
       <div className="bg-white/50  rounded-xl  shadow-lg p-6 mx-auto mb-6" >
       <form onSubmit={handleSubmit}>
         {/* Main Search Fields */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-6">
+            {/* Patient Family Name */}
           <div>
              <label className="block text-lg  text-slate-600 mb-2">
                 Patient Family Name
             </label>
-              <div className="relative">
+              <div className="relative ">
                 <input
                   type="text"
                   name="patientFamilyName"
                   value={formData.patientFamilyName}
                   onChange={handleInputChange}
                   placeholder="Enter family name"
-                  className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]  "
+                  className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
 
                 />
-                <label className="absolute right-3 top-2 flex items-center text-sm text-slate-500">
+                <label className="flex items-center text-sm text-slate-500 mt-2">
                   <input
                     type="checkbox"
                     name="fuzzyMatching"
                     checked={formData.fuzzyMatching}
                     onChange={handleInputChange}
-                    className="mr-2  accent-[#0a6e79]"
+                    className="mr-2  accent-[#0a6e79] dark:bg-red-700"
                   />
                   Fuzzy Matching
                 </label>
               </div>
           
               
-          </div>
-          <div>
-              <label className="block text-lg  text-slate-600 mb-2">
-               Study Description
-              </label>
-                <input
-              name="studyDescription"
-              placeholder="Enter Study Description"
-              value={formData.studyDescription}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
-            />
-          </div>
-          <div>
-             <label className="block text-lg  text-slate-600 mb-2">
-               Sending AET of Series
-              </label>
-                <input
-              name="sendingAET"
-              placeholder="Enter Sending AET of Series"
-              value={formData.sendingAET}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
-            />
-          </div>
+            </div>
+               {/* Patient ID */}
           <div>
              <label className="block text-lg  text-slate-600 mb-2">
                 Patient ID
@@ -143,10 +123,26 @@ export default function StudiesBox() {
               placeholder="Enter Patient ID"
               value={formData.patientId}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
             />
               
-          </div>
+            </div>
+       
+             {/* Institutional name */}
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+               Institutional name
+              </label>
+                <input
+              name="institutionalName"
+              placeholder="Enter Sending AET of Series"
+              value={formData.institutionalName}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
+            />
+            </div>
+         
+            {/* Modality */}
           <div>
              <label className="block text-lg  text-slate-600 mb-2">
                 Modality
@@ -155,20 +151,48 @@ export default function StudiesBox() {
                 name="modality"
                 value={formData.modality}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
               >
                 <option value="All">All</option>
                 <option value="CT">CT</option>
                 <option value="MR">MR</option>
                 <option value="US">US</option>
-              <option value="CR">CR</option>
-              <option value="DX">DX</option>
+                <option value="CR">CR</option>
+                <option value="DX">DX</option>
                 <option value="XA">XA</option>
                 <option value="NM">NM</option>
                 <option value="PT">PT</option>
                 <option value="OT">OT</option>
               </select>
-          </div>
+            </div>
+              {/* Accession number */}
+          <div>
+             <label className="block text-lg  text-slate-600 mb-2">
+                Accession number
+              </label>
+                <input
+              name="accessionNumber"
+              placeholder="Enter Accession number"
+              value={formData.accessionNumber}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
+            />
+              
+            </div>
+                   {/* Study Description */}
+          <div>
+              <label className="block text-lg  text-slate-600 mb-2">
+               Study Description
+              </label>
+                <input
+              name="studyDescription"
+              placeholder="Enter Study Description"
+              value={formData.studyDescription}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
+            />
+            </div>
+            {/* Study date */}
           <div>
              <label className="block text-lg  text-slate-600 mb-2">
                Study date
@@ -179,22 +203,27 @@ export default function StudiesBox() {
               placeholder="Enter Study date"
               value={formData.studyDate}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800 [&::-webkit-calendar-picker-indicator]:text-gray-800"
             />
-          </div>
+            </div>
+             {/* Report Status */}
           <div>
              <label className="block text-lg  text-slate-600 mb-2">
-                Accession number
+                Report Status
               </label>
-                <input
-              name="accessionNumber"
-              placeholder="Enter Accession number"
-              value={formData.accessionNumber}
+              <select
+                name="reportStatus"
+                value={formData.reportStatus}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
-            />
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
+              >
+                <option value="Done">Done</option>
+                <option value="Send">Send</option>
+                <option value="Failed">Failed</option>
               
-          </div>
+              </select>
+            </div>
+             {/* Referring physician family
           <div>
                <label className="block text-lg  text-slate-600 mb-2">
                Referring physician family
@@ -206,7 +235,8 @@ export default function StudiesBox() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
-          </div>
+            </div> */}
+            {/* Study time
           <div>
              <label className="block text-lg  text-slate-600 mb-2">
                Study time
@@ -219,7 +249,8 @@ export default function StudiesBox() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
-          </div>
+            </div> */}
+             {/* Issuer of patient
             <div>
              <label className="block text-lg  text-slate-600 mb-2">
                 Issuer of patient
@@ -232,7 +263,8 @@ export default function StudiesBox() {
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
               
-          </div>
+            </div> */}
+             {/* Institutional Department Name
           <div>
                  <label className="block text-lg  text-slate-600 mb-2">
                Institutional Department Name
@@ -244,7 +276,8 @@ export default function StudiesBox() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
-           </div>
+            </div> */}
+            {/* Study Received
           <div>
              <label className="block text-lg  text-slate-600 mb-2">
                Study Received
@@ -257,7 +290,8 @@ export default function StudiesBox() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
-          </div>
+            </div> */}
+            {/* Issuer of accession number
           <div>
              <label className="block text-lg  text-slate-600 mb-2">
                Issuer of accession number
@@ -270,8 +304,9 @@ export default function StudiesBox() {
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
               
-          </div>
-          <div></div>
+          </div> */}
+            {/* <div></div> */}
+              {/* Study Access
           <div>
              <label className="block text-lg  text-slate-600 mb-2">
                Study Access
@@ -283,10 +318,10 @@ export default function StudiesBox() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317]"
             />
-          </div>
+          </div> */}
         </div>
 
-        {/* Advanced Filters Toggle */}
+        {/* Advanced Filters Toggle
         <div className="px-6">
           <button
             type="button"
@@ -295,9 +330,9 @@ export default function StudiesBox() {
           >
             {showAdvanced ? '▲ Hide Advanced' : '▼ Show Advanced'}
           </button>
-        </div>
+        </div> */}
 
-        {/* Advanced Fields */}
+        {/* Advanced Fields
         {showAdvanced && (
           <div className="px-6 pb-6">
             <div className="p-4 bg-slate-50 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -328,11 +363,11 @@ export default function StudiesBox() {
                 </div>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Footer - Controls */}
         <div className="flex items-center gap-4 px-6 py-4 border-t">
-          <select
+          {/* <select
             name="orderBy"
             value={formData.orderBy}
             onChange={handleInputChange}
@@ -364,7 +399,7 @@ export default function StudiesBox() {
             >
               Clear
             </button>
-          )}
+          )} */}
 
           <button
             type="submit"
@@ -389,7 +424,7 @@ export default function StudiesBox() {
       {/* Search Results */}
       {searchResults.length > 0 && (
         <div className="bg-white  rounded-xl shadow-lg overflow-hidden">
-          <div className="px-6 py-4 bg-slate-800 text-white">
+          <div className="px-6 py-4 bg-[#0a6e79] text-white">
             <h2 className="text-xl font-bold">
               Search Results ({searchResults.length})
             </h2>
@@ -404,7 +439,16 @@ export default function StudiesBox() {
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
                     Patient ID
-                  </th>
+                </th>
+                 <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
+                    Priority
+                </th>
+                 <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
+                    Status
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
+                    No. of Images
+                </th>
                   <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">
                     Study Date
                   </th>
@@ -431,6 +475,15 @@ export default function StudiesBox() {
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {study.patientId}
                     </td>
+                     <td className="px-6 py-4 text-sm text-slate-600">
+                      {study.priority}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {study.status}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {study.noImages}
+                    </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
                       {study.studyDate}
                     </td>
@@ -450,7 +503,7 @@ export default function StudiesBox() {
                         onClick={() =>
                           navigate(`/series?studyUID=${study.studyInstanceUID}`)
                         }
-                        className="px-3 py-1 bg-slate-800 text-white rounded hover:bg-slate-900"
+                        className="px-3 py-1 bg-[#0a6e79] text-white rounded hover:bg-slate-900"
                       >
                         View Series
                       </button>
@@ -461,7 +514,7 @@ export default function StudiesBox() {
             </table>
           </div>
         </div>
-      )}
+      )} 
 
       {/* Empty State */}
       {searchResults.length === 0 && !isSearching && !error && (
