@@ -38,7 +38,7 @@ export default function Navbar() {
       </div>
 
  
-     <div className="flex flex-col items-start">
+     <div className="flex flex-col items-start text-black">
          <button 
               className=" text-lg px-4 py-2 rounded-lg transition bg-transparent focus:outline-0 border-none hover:text-[#14A3B8]"
              > 
