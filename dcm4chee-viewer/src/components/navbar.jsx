@@ -1,11 +1,9 @@
 import { NavLink } from "react-router-dom";
 
 const navItems = [
-  {
-    name: "Patients", path: "/patients", iconClass: "fa-solid fa-hospital-user"
-  },
+  {name: "Patients", path: "/patients", iconClass: "fa-solid fa-hospital-user"},
   { name: "Studies", path: "/studies", iconClass: "fa-solid fa-book-open-reader"},
-  { name: "MWL", path: "/mwl", iconClass: "fa-solid fa-user-check" },
+  // { name: "MWL", path: "/mwl", iconClass: "fa-solid fa-user-check" },
   // { name: "MPPS", path: "/mpps", iconClass: "fa-solid fa-hospital-user" },
   // { name: "Work Items", path: "/work-items", iconClass: "fa-solid fa-hospital-user" },
   // { name: "Compare", path: "/compare", iconClass: "fa-solid fa-hospital-user" },
