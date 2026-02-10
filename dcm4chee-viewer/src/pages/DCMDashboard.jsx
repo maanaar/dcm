@@ -143,10 +143,10 @@ export default function DashboardPage() {
 
       {/* Header */}
           <div className=" wallpaper-page w-full bg-white/50  rounded-2xl  backdrop-blur-md border shadow" >
-      <div className="flex gap-2 px-6 py-3 border-b">
-        <span className="text-2xl text-[rgb(215,160,56)]">  <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" /></span>
-        <h2 className="text-2xl  mt-2  font-semibold font-[montserrat]">Hospital Dashboard</h2>
-      </div>
+            <div className="flex gap-2 px-6 py-3 border-b">
+            <span className="text-2xl text-[rgb(215,160,56)]">  <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" /></span>
+            <h2 className="text-2xl  mt-2  font-semibold font-[montserrat]">Hospital Dashboard</h2>
+          </div>
 
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3  px-4 py-2 gap-4 mb-2">
@@ -167,7 +167,24 @@ export default function DashboardPage() {
               <p className="text-sm text-black-600 font-semibold font-[montserrat]">Total Studies</p>
               <p className="text-3xl font-bold text-black-800">{totalStudies.toLocaleString()}</p>
             </div>
+            
+
+             {/* second row cards new edits updated  */}
+             <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#31B6C5]">
+              <p className="text-sm text-black-600  font-semibold font-[montserrat] ">Hospitals Patients</p>
+              <p className="text-3xl font-bold text-black-800">12</p>
+              <p className="text-xs text-black-600 mt-1">2 Active</p>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#1E7586]">
+              <p className="text-sm text-black-600 font-semibold font-[montserrat]">Studies Series</p>
+              <p className="text-3xl font-bold text-black-800">44</p>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#2F545B]">
+              <p className="text-sm text-black-600 font-semibold font-[montserrat]">Failures Modalities</p>
+              <p className="text-3xl font-bold text-black-800">10</p>
+            </div>
           </div>
+          
 
           {/* Search and Filter */}
           <div className="flex flex-col md:flex-row gap-4 mb-4 px-4 py-2">

@@ -6,6 +6,7 @@ import StudiesPage from "./pages/studies.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import DashboardPage from "./pages/DCMDashboard.jsx";
 import Background from "./components/background.jsx";
+import SingleHospitalPage from "./components/singleHospital.jsx";
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname === "/login";
@@ -25,6 +26,7 @@ function AppContent() {
             <Route path="/studies" element={<StudiesPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/dashboard" element={<DashboardPage/>} />
+            <Route path="/singleHospitalDashboard" element={<SingleHospitalPage/>} />
           </Routes>
         </main>
       </div>
