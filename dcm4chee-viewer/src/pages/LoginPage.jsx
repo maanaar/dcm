@@ -52,7 +52,7 @@ export default function LoginPage() {
         localStorage.setItem('userEmail', email);
 
         // Login successful - redirect to mwl page
-        navigate('/mwl');
+        navigate('/patients');
       } else {
         setError('Invalid username or password. Please try again.');
         setIsLoading(false);

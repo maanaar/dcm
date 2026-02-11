@@ -1,315 +1,412 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import userDB from '../services/userDatabase';
+import { fetchDashboardStats, fetchHospitals } from '../services/dcmchee';
 
-// Sample hospital data
-const hospitalData = [
-  {
-    id: 1,
-    name: 'City General Hospital',
-    location: 'Downtown, Alexandria',
-    type: 'General Hospital',
-    beds: 450,
-    departments: ['Cardiology', 'Neurology', 'Orthopedics', 'Emergency'],
-    patients: 1250,
-    studies: 3400,
-    modalities: ['CT', 'MRI', 'X-Ray', 'Ultrasound'],
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=250&fit=crop'
-  },
-  {
-    id: 2,
-    name: 'St. Mary Medical Center',
-    location: 'North District, Alexandria',
-    type: 'Specialized Center',
-    beds: 280,
-    departments: ['Oncology', 'Radiology', 'Surgery'],
-    patients: 890,
-    studies: 2100,
-    modalities: ['CT', 'PET-CT', 'MRI'],
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=400&h=250&fit=crop'
-  },
-  {
-    id: 3,
-    name: 'Alexandria Children\'s Hospital',
-    location: 'West Side, Alexandria',
-    type: 'Pediatric Hospital',
-    beds: 200,
-    departments: ['Pediatrics', 'NICU', 'Pediatric Surgery'],
-    patients: 650,
-    studies: 1800,
-    modalities: ['X-Ray', 'Ultrasound', 'MRI'],
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1632833239869-a37e3a5806d2?w=400&h=250&fit=crop'
-  },
-  {
-    id: 4,
-    name: 'Eastern Regional Medical',
-    location: 'East Alexandria',
-    type: 'Regional Hospital',
-    beds: 350,
-    departments: ['Emergency', 'ICU', 'General Medicine'],
-    patients: 980,
-    studies: 2600,
-    modalities: ['CT', 'X-Ray', 'Ultrasound', 'Mammography'],
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=400&h=250&fit=crop'
-  },
-  {
-    id: 5,
-    name: 'Coastal Heart Institute',
-    location: 'Waterfront, Alexandria',
-    type: 'Cardiac Specialty',
-    beds: 150,
-    departments: ['Cardiology', 'Cardiac Surgery', 'Interventional'],
-    patients: 420,
-    studies: 1500,
-    modalities: ['CT Angiography', 'Echocardiography', 'Nuclear'],
-    status: 'maintenance',
-    image: 'https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=400&h=250&fit=crop'
-  },
-  {
-    id: 6,
-    name: 'University Teaching Hospital',
-    location: 'University District, Alexandria',
-    type: 'Teaching Hospital',
-    beds: 550,
-    departments: ['All Specialties', 'Research', 'Emergency'],
-    patients: 1600,
-    studies: 4200,
-    modalities: ['CT', 'MRI', 'PET-CT', 'X-Ray', 'Ultrasound', 'Nuclear'],
-    status: 'active',
-    image: 'https://images.unsplash.com/photo-1596541223130-5d31a73fb6c6?w=400&h=250&fit=crop'
-  }
-];
+// ─── Skeleton pulse block ─────────────────────────────────────────────────────
+function Skeleton({ className = '' }) {
+  return <div className={`animate-pulse bg-slate-200 rounded-lg ${className}`} />;
+}
 
+// ─── Top stat card ────────────────────────────────────────────────────────────
+function StatCard({ label, value, sub, accent, loading }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-4 border-l-4" style={{ borderColor: accent }}>
+      <p className="text-sm font-semibold text-slate-500 font-[montserrat]">{label}</p>
+      {loading
+        ? <Skeleton className="h-9 w-24 mt-1" />
+        : <p className="text-3xl font-bold text-slate-800">{value}</p>
+      }
+      {sub && (
+        loading
+          ? <Skeleton className="h-3 w-16 mt-1" />
+          : <p className="text-xs text-slate-400 mt-1">{sub}</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Hospital card skeleton ───────────────────────────────────────────────────
+function HospitalCardSkeleton() {
+  return (
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="h-48 bg-slate-200 animate-pulse" />
+      <div className="p-4 space-y-3">
+        <Skeleton className="h-4 w-3/4" />
+        <div className="grid grid-cols-3 gap-2">
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-12 rounded-lg" />
+        </div>
+        <Skeleton className="h-4 w-1/2" />
+        <div className="flex gap-1">
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-12 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const DEFAULT_VISIBLE = 12;
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const [hospitals, setHospitals] = useState(hospitalData);
-  const [filter, setFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentUser, setCurrentUser] = useState(null);
 
-  // useEffect(() => {
-  //   // Check if user is authenticated
-  //   if (!userDB.isAuthenticated()) {
-  //     navigate('/login');
-  //     return;
-  //   }
-    
-  //   const user = userDB.getCurrentUser();
-  //   setCurrentUser(user);
-  // }, [navigate]);
+  const [searchTerm, setSearchTerm]       = useState('');
+  const [typeFilter, setTypeFilter]       = useState('all');
+  const [statusFilter, setStatusFilter]   = useState('all');
+  const [showAll, setShowAll]             = useState(false);
 
-  // Filter hospitals
-  const filteredHospitals = hospitals.filter(hospital => {
-    const matchesSearch = hospital.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         hospital.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filter === 'all' || hospital.type === filter;
-    return matchesSearch && matchesFilter;
+  // API state
+  const [hospitals, setHospitals]         = useState([]);
+  const [apiStats, setApiStats]           = useState(null);
+  const [hospitalsLoading, setHospitalsLoading] = useState(true);
+  const [statsLoading, setStatsLoading]   = useState(true);
+  const [hospitalsError, setHospitalsError] = useState(null);
+  const [statsError, setStatsError]       = useState(null);
+
+  // ── Fetch hospitals from API ────────────────────────────────────────────────
+  useEffect(() => {
+    setHospitalsLoading(true);
+    fetchHospitals()
+      .then(data => setHospitals(data))
+      .catch(err  => setHospitalsError(err.message))
+      .finally(()  => setHospitalsLoading(false));
+  }, []);
+
+  // ── Fetch network-wide stats ────────────────────────────────────────────────
+  useEffect(() => {
+    setStatsLoading(true);
+    fetchDashboardStats()
+      .then(data => setApiStats(data))
+      .catch(err  => setStatsError(err.message))
+      .finally(()  => setStatsLoading(false));
+  }, []);
+
+  // ── Per-hospital stats: fetch each hospital’s own dashboard data ────────────────
+  const [hospitalStats, setHospitalStats] = useState({});  // { [id]: {totalPatients, totalStudies} }
+
+  useEffect(() => {
+    if (!hospitals.length) return;
+    // Fetch each hospital’s dashboard in parallel — silently ignore failures
+    hospitals.forEach(h => {
+      fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'}/dashboard/hospital/${h.id}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return;
+          setHospitalStats(prev => ({
+            ...prev,
+            [h.id]: {
+              patients: data.totalPatients?.toLocaleString() ?? '—',
+              studies:  data.totalStudies?.toLocaleString()  ?? '—',
+            },
+          }));
+        })
+        .catch(() => {});
+    });
+  }, [hospitals]);
+
+  // Merge per-hospital stats into the hospital list
+  const hospitalsWithStats = hospitals.map(h => ({
+    ...h,
+    patients: hospitalStats[h.id]?.patients ?? '—',
+    studies:  hospitalStats[h.id]?.studies  ?? '—',
+  }));
+
+  // ── Build type options dynamically from fetched hospitals ──────────────────
+  const typeOptions = ['all', ...Array.from(new Set(hospitals.map(h => h.type))).sort()];
+
+  // ── Filter logic ─────────────────────────────────────────────────────────
+  const filtered = hospitalsWithStats.filter(h => {
+    const q = searchTerm.toLowerCase();
+    const matchSearch =
+      h.name.toLowerCase().includes(q) ||
+      (h.location || '').toLowerCase().includes(q) ||
+      (h.type || '').toLowerCase().includes(q);
+    const matchType   = typeFilter   === 'all' || h.type   === typeFilter;
+    const matchStatus = statusFilter === 'all' || h.status === statusFilter;
+    return matchSearch && matchType && matchStatus;
   });
 
-  const hospitalTypes = ['all', 'General Hospital', 'Specialized Center', 'Pediatric Hospital', 'Regional Hospital', 'Cardiac Specialty', 'Teaching Hospital'];
+  // ── How many to show ───────────────────────────────────────────────────────
+  const visibleHospitals = showAll ? filtered : filtered.slice(0, DEFAULT_VISIBLE);
+  const hiddenCount      = filtered.length - DEFAULT_VISIBLE;
 
-  // Calculate statistics
-  const totalBeds = hospitals.reduce((sum, h) => sum + h.beds, 0);
-  const totalPatients = hospitals.reduce((sum, h) => sum + h.patients, 0);
-  const totalStudies = hospitals.reduce((sum, h) => sum + h.studies, 0);
-  const activeHospitals = hospitals.filter(h => h.status === 'active').length;
+  const activeCount      = hospitals.filter(h => h.status === 'active').length;
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-{/*               <h1 className="text-4xl font-bold text-[rgb(45,97,135)]">Hospital Dashboard</h1> */}
-{/*               <p className="text-black-600 mt-2">DICOM Network Management System</p> */}
-              {currentUser && (
-                <p className="text-sm text-black-500 mt-1">
-                  Welcome, {currentUser.name} ({currentUser.role})
-                </p>
+
+        {/* ── Header + KPI cards ────────────────────────────────────── */}
+        <div className="mb-6">
+          <div className="wallpaper-page w-full bg-white/50 rounded-2xl backdrop-blur-md border shadow">
+
+            {/* Title bar */}
+            <div className="flex gap-2 px-6 py-3 border-b items-center">
+              <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" />
+              <h2 className="text-2xl mt-1 font-semibold font-[montserrat]">Hospital Dashboard</h2>
+              {(hospitalsError || statsError) && (
+                <span className="ml-auto text-xs text-red-500 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
+                  ⚠️ {hospitalsError || statsError}
+                </span>
               )}
             </div>
-{/*             <button */}
-{/*               onClick={() => logout() || navigate('/login')} */}
-{/*               className="px-4 py-2 bg-black-800 text-white rounded-lg hover:bg-black-900 transition" */}
-{/*             > */}
-{/*               Logout */}
-{/*             </button> */}
-          </div>
 
-      {/* Header */}
-          <div className=" wallpaper-page w-full bg-white/50  rounded-2xl  backdrop-blur-md border shadow" >
-            <div className="flex gap-2 px-6 py-3 border-b">
-            <span className="text-2xl text-[rgb(215,160,56)]">  <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" /></span>
-            <h2 className="text-2xl  mt-2  font-semibold font-[montserrat]">Hospital Dashboard</h2>
-          </div>
+            {/* KPI row 1 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 px-4 pt-4 pb-2 gap-4">
+              <StatCard
+                label="Total Hospitals"
+                value={hospitalsLoading ? '—' : hospitals.length}
+                sub={hospitalsLoading ? null : `${activeCount} Active`}
+                accent="#31B6C5"
+                loading={hospitalsLoading}
+              />
+              <StatCard
+                label="Total Patients"
+                value={apiStats?.totalPatients?.toLocaleString() ?? '—'}
+                accent="#1E7586"
+                loading={statsLoading}
+              />
+              <StatCard
+                label="Total Studies"
+                value={apiStats?.totalStudies?.toLocaleString() ?? '—'}
+                accent="#2F545B"
+                loading={statsLoading}
+              />
+            </div>
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3  px-4 py-2 gap-4 mb-2">
-            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#31B6C5]">
-              <p className="text-sm text-black-600  font-semibold font-[montserrat] ">Total Hospitals</p>
-              <p className="text-3xl font-bold text-black-800">{hospitals.length}</p>
-              <p className="text-xs text-black-600 mt-1">{activeHospitals} Active</p>
+            {/* KPI row 2 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 px-4 pb-4 gap-4">
+              <StatCard
+                label="Total Series"
+                value={apiStats?.totalSeries?.toLocaleString() ?? '—'}
+                sub="Across all studies"
+                accent="#31B6C5"
+                loading={statsLoading}
+              />
+              <StatCard
+                label="Total Images"
+                value={apiStats?.totalInstances?.toLocaleString() ?? '—'}
+                sub="DICOM instances"
+                accent="#1E7586"
+                loading={statsLoading}
+              />
+              <StatCard
+                label="Modality Types"
+                value={apiStats?.studiesByModality?.length ?? '—'}
+                sub={apiStats?.studiesByModality?.slice(0, 3).map(m => m.modality).join(', ') ?? '—'}
+                accent="#2F545B"
+                loading={statsLoading}
+              />
             </div>
-{/*             <div className="bg-white rounded-lg shadow p-4 border-l-4 border-black-500"> */}
-{/*               <p className="text-sm text-black-600">Total Beds</p> */}
-{/*               <p className="text-3xl font-bold text-black-800">{totalBeds.toLocaleString()}</p> */}
-{/*             </div> */}
-            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#1E7586]">
-              <p className="text-sm text-black-600 font-semibold font-[montserrat]">Total Patients</p>
-              <p className="text-3xl font-bold text-black-800">{totalPatients.toLocaleString()}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#2F545B]">
-              <p className="text-sm text-black-600 font-semibold font-[montserrat]">Total Studies</p>
-              <p className="text-3xl font-bold text-black-800">{totalStudies.toLocaleString()}</p>
-            </div>
-            
 
-             {/* second row cards new edits updated  */}
-             <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#31B6C5]">
-              <p className="text-sm text-black-600  font-semibold font-[montserrat] ">Hospitals Patients</p>
-              <p className="text-3xl font-bold text-black-800">12</p>
-              <p className="text-xs text-black-600 mt-1">2 Active</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#1E7586]">
-              <p className="text-sm text-black-600 font-semibold font-[montserrat]">Studies Series</p>
-              <p className="text-3xl font-bold text-black-800">44</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 border-l-4 border-[#2F545B]">
-              <p className="text-sm text-black-600 font-semibold font-[montserrat]">Failures Modalities</p>
-              <p className="text-3xl font-bold text-black-800">10</p>
-            </div>
-          </div>
-          
+            {/* Search + filters */}
+            <div className="flex flex-col md:flex-row gap-3 px-4 pb-4">
+              <input
+                type="text"
+                placeholder="Search by name, location, or type…"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="flex-1 px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-[#31B6C5] bg-white text-slate-700 text-sm"
+              />
+              <select
+                value={typeFilter}
+                onChange={e => setTypeFilter(e.target.value)}
+                className="px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-[#31B6C5] bg-white text-slate-700 text-sm"
+              >
+                {typeOptions.map(type => (
+                  <option key={type} value={type}>
+                    {type === 'all' ? '🏥 All Types' : type}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-[#31B6C5] bg-white text-slate-700 text-sm"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">🟢 Active</option>
+                <option value="maintenance">🟠 Maintenance</option>
+              </select>
 
-          {/* Search and Filter */}
-          <div className="flex flex-col md:flex-row gap-4 mb-4 px-4 py-2">
-            <input
-
-              type="text"
-              placeholder="Search hospitals..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-black-500 "
-            />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-black-500 "
-            >
-              {hospitalTypes.map(type => (
-                <option key={type} value={type}>
-                  {type === 'all' ? 'All Types' : type}
-                </option>
-              ))}
-            </select>
+              {/* Results badge */}
+              {!hospitalsLoading && (
+                <div className="flex items-center px-3 py-2 bg-[#00768310] rounded-xl text-sm text-[#0a6e79] font-medium whitespace-nowrap">
+                  {showAll ? filtered.length : Math.min(filtered.length, DEFAULT_VISIBLE)}
+                  &nbsp;/ {filtered.length} hospitals
+                </div>
+              )}
+            </div>
           </div>
         </div>
-                     </div>
-          <div className=" wallpaper-page w-full bg-white/50  rounded-2xl  backdrop-blur-md border shadowp-4    p-4    " >
-        {/* Hospital Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredHospitals.map(hospital => (
-            <div
-              key={hospital.id}
-              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer"
-              onClick={() => navigate(`/hospital/${hospital.id}`)}
-            >
-              {/* Hospital Image */}
-              <div className="h-48 bg-gradient-to-br from-black-500 to-purple-600 relative overflow-hidden">
-                <img
-                  src={hospital.image}
-                  alt={hospital.name}
-                  className="w-full h-full object-cover opacity-80"
-                />
-                <div className="absolute top-4 right-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    hospital.status === 'active' 
-                      ? 'bg-black-500 text-white' 
-                      : 'bg-orange-500 text-white'
-                  }`}>
-                    {hospital.status.toUpperCase()}
-                  </span>
-                </div>
+
+        {/* ── Hospital Cards Grid ───────────────────────────────────── */}
+        <div className="wallpaper-page w-full bg-white/50 rounded-2xl backdrop-blur-md border shadow p-4">
+
+          {hospitalsLoading ? (
+            /* Skeleton grid */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => <HospitalCardSkeleton key={i} />)}
+            </div>
+          ) : visibleHospitals.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-5xl mb-3">🏥</div>
+              <p className="text-slate-500 text-lg font-[montserrat]">
+                No hospitals found matching your criteria.
+              </p>
+              <button
+                onClick={() => { setSearchTerm(''); setTypeFilter('all'); setStatusFilter('all'); }}
+                className="mt-4 px-5 py-2 bg-[#31B6C5] text-white rounded-xl text-sm font-medium hover:bg-[#1E7586] transition"
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {visibleHospitals.map(hospital => (
+                  <HospitalCard
+                    key={hospital.id}
+                    hospital={hospital}
+                    statsLoaded={hospital.id in hospitalStats}
+                    onClick={() => navigate(`/hospital/${hospital.id}`)}
+                  />
+                ))}
               </div>
 
-              {/* Hospital Info */}
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-black-800 mb-2 font-[montserrat]">{hospital.name}</h3>
-                <p className="text-sm text-black-600 mb-1">📍 {hospital.location}</p>
-                <p className="text-sm text-black-600 mb-4">{hospital.type}</p>
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className="text-center bg-black-50 rounded p-2">
-                    <p className="text-sm text-black-600 font-[lato]">Beds</p>
-                    <p className="text-lg font-bold text-black-800">{hospital.beds}</p>
-                  </div>
-                  <div className="text-center bg-black-50 rounded p-2">
-                    <p className="text-sm text-black-600 font-[lato]">Patients</p>
-                    <p className="text-lg font-bold text-black-800">{hospital.patients}</p>
-                  </div>
-                  <div className="text-center bg-black-50 rounded p-2">
-                    <p className="text-sm text-black-600 font-[lato]">Studies</p>
-                    <p className="text-lg font-bold text-black-800">{hospital.studies}</p>
-                  </div>
+              {/* Show more / show less controls */}
+              {filtered.length > DEFAULT_VISIBLE && (
+                <div className="mt-6 flex justify-center gap-3">
+                  {!showAll ? (
+                    <button
+                      onClick={() => setShowAll(true)}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#0a6e79] hover:bg-[#1E7586] text-white rounded-xl text-sm font-semibold transition shadow"
+                    >
+                      Show all {filtered.length} hospitals
+                      <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs">+{hiddenCount}</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowAll(false)}
+                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-sm font-semibold transition"
+                    >
+                      ↑ Show less
+                    </button>
+                  )}
                 </div>
+              )}
+            </>
+          )}
+        </div>
 
-                {/* Departments */}
-                <div className="mb-4">
-                  <p className=" font-semibold text-sm text-black-600 mb-2 font-[montserrat]" >Departments:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {hospital.departments.slice(0, 3).map((dept, idx) => (
-                      <span
-                        key={idx}
-                        className="text-sm bg-black-100 text-black-800 px-2 py-1 rounded"
-                      >
-                        {dept}
-                      </span>
-                    ))}
-                    {hospital.departments.length > 3 && (
-                      <span className="text-sm bg-black-100 text-black-600 px-2 py-1 rounded font-[lato]">
-                        +{hospital.departments.length - 3}
-                      </span>
-                    )}
-                  </div>
-                </div>
+      </div>
+    </div>
+  );
+}
 
-                {/* Modalities */}
-                <div>
-                  <p className="font-semibold text-sm text-black-600 mb-2 font-[montserrat]">Modalities:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {hospital.modalities.map((modality, idx) => (
-                      <span
-                        key={idx}
-                        className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded"
-                      >
-                        {modality}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+// ─── Hospital Card component ──────────────────────────────────────────────────
+function HospitalCard({ hospital, statsLoaded, onClick }) {
+  return (
+    <div
+      className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group border border-transparent hover:border-[#31B6C5]/30"
+      onClick={onClick}
+    >
+      {/* Image */}
+      <div className="h-48 relative overflow-hidden">
+        <img
+          src={hospital.image}
+          alt={hospital.name}
+          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
 
-                {/* Action Button */}
-{/*                 <button className="w-full mt-4 bg-black-800 text-white py-2 rounded-lg hover:bg-black-900 transition"> */}
-{/*                   View Details */}
-{/*                 </button> */}
-              </div>
+        {/* Status badge */}
+        <div className="absolute top-3 right-3">
+          <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow ${
+            hospital.status === 'active'
+              ? 'bg-emerald-500 text-white'
+              : 'bg-orange-500 text-white'
+          }`}>
+            {hospital.status?.toUpperCase()}
+          </span>
+        </div>
+
+        {/* Overlay: name + location */}
+        <div className="absolute bottom-3 left-4 right-4">
+          <p className="text-white font-bold text-base drop-shadow font-[montserrat] leading-tight">
+            {hospital.name}
+          </p>
+          <p className="text-white/80 text-xs mt-0.5">📍 {hospital.location}</p>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="p-4">
+        <p className="text-xs text-slate-400 mb-3 font-medium uppercase tracking-wide">
+          {hospital.type}
+        </p>
+
+        {/* Live stats row */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[
+            { label: 'Beds',     value: hospital.beds, alwaysReady: true },
+            { label: 'Patients', value: statsLoaded ? hospital.patients : null },
+            { label: 'Studies',  value: statsLoaded ? hospital.studies : null },
+          ].map(({ label, value }) => (
+            <div key={label} className="text-center bg-[#00768310] rounded-lg p-2">
+              <p className="text-xs text-slate-500 font-[lato]">{label}</p>
+              {value === null
+                ? <Skeleton className="h-5 w-10 mx-auto mt-1" />
+                : <p className="text-sm font-bold text-slate-800">{value}</p>
+              }
             </div>
           ))}
         </div>
-</div>
 
-        {/* No Results */}
-        {filteredHospitals.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-black-600 text-lg font-[montserrat]">No hospitals found matching your criteria.</p>
+        {/* Departments */}
+        <div className="mb-3">
+          <p className="text-xs font-semibold text-slate-500 mb-1.5 font-[montserrat] uppercase tracking-wide">
+            Departments
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {(hospital.departments || []).slice(0, 3).map((dept, idx) => (
+              <span key={idx} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                {dept}
+              </span>
+            ))}
+            {(hospital.departments || []).length > 3 && (
+              <span className="text-xs bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">
+                +{hospital.departments.length - 3}
+              </span>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Modalities */}
+        <div>
+          <p className="text-xs font-semibold text-slate-500 mb-1.5 font-[montserrat] uppercase tracking-wide">
+            Modalities
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {(hospital.modalities || []).map((m, idx) => (
+              <span key={idx} className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium">
+                {m}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* View Dashboard CTA */}
+        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+          <span className="text-xs text-slate-400">Click to open dashboard</span>
+          <span className="text-xs font-semibold text-[#0a6e79] group-hover:translate-x-1 transition-transform inline-block">
+            View →
+          </span>
+        </div>
       </div>
     </div>
   );

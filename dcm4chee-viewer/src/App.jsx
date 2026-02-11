@@ -20,13 +20,13 @@ function AppContent() {
 
         <main className="w-full flex-1">
           <Routes>
-            <Route path="/" element={<Navigate to="/mwl" />} />
-            <Route path="/mwl" element={<MWLPage />} />
+            <Route path="/" element={<Navigate to="/login" />} />
+            {/* <Route path="/mwl" element={<MWLPage />} /> */}
             <Route path="/patients" element={<PatientsPage />} />
             <Route path="/studies" element={<StudiesPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/dashboard" element={<DashboardPage/>} />
-            <Route path="/singleHospitalDashboard" element={<SingleHospitalPage/>} />
+            <Route path="/hospital/:id" element={<SingleHospitalPage />} />
           </Routes>
         </main>
       </div>
