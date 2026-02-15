@@ -4,13 +4,14 @@ from fastapi.responses import JSONResponse
 import httpx
 import os
 from typing import Optional
+from urllib.parse import parse_qs, urlencode
 
 app = FastAPI()
 
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://172.16.16.221:5173"],
+    allow_origins=["http://172.16.16.221:5173","http://localhost:5173","http://smart.nextasolutions.net:5173"],  # No trailing slash
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -24,8 +25,33 @@ PASSWORD     = os.getenv("DCM4CHEE_PASSWORD", "changeit")
 
 client = httpx.AsyncClient(verify=False)
 
+# ============================================================================
+# ARCHIVE CONFIGURATIONS - Multi-Archive Support
+# ============================================================================
+
+ARCHIVE_CONFIGS = {
+    "dcm4chee-arc": {
+        "url": os.getenv("DCM4CHEE_URL", "http://172.16.16.221:8080"),
+        "path": "/dcm4chee-arc/aets/DCM4CHEE/rs",
+        "auth_required": True,
+        "description": "DCM4CHEE Archive 5.x"
+    },
+    "orthanc": {
+        "url": os.getenv("ORTHANC_URL", "http://172.16.16.221:8042"),
+        "path": "/dicom-web",
+        "auth_required": False,
+        "description": "Orthanc DICOM Server"
+    },
+    "conquest": {
+        "url": os.getenv("CONQUEST_URL", "http://172.16.16.221:5678"),
+        "path": "/wado",
+        "auth_required": False,
+        "description": "Conquest DICOM Server"
+    },
+}
+
 # ─── Static hospital registry (server-side) ───────────────────────────────────
-# In a real deployment replace this with a database query.
+# In a real deployment, replace this with a database query
 HOSPITAL_REGISTRY = [
     {
         "id": 1,
@@ -38,7 +64,7 @@ HOSPITAL_REGISTRY = [
         "modalities": ["CT", "MRI", "X-Ray", "Ultrasound"],
         "status": "active",
         "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=600&h=350&fit=crop",
-        "institutionName": "City General",   # matches InstitutionName DICOM tag (00080080)
+        "institutionName": "City General",
     },
     {
         "id": 2,
@@ -183,10 +209,167 @@ HOSPITAL_REGISTRY = [
         "image": "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=600&h=350&fit=crop",
         "institutionName": "Delta Respiratory",
     },
+    {
+        "id": 13,
+        "name": "Mediterranean Cancer Center",
+        "location": "Stanley, Alexandria",
+        "type": "Cancer Specialty",
+        "beds": 200,
+        "staff": 175,
+        "departments": ["Medical Oncology", "Radiation Oncology", "Surgical Oncology"],
+        "modalities": ["PET-CT", "MRI", "CT", "Nuclear"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1631815589968-fdb09a223b1e?w=600&h=350&fit=crop",
+        "institutionName": "Mediterranean Cancer",
+    },
+    {
+        "id": 14,
+        "name": "Alexandria Neurological Institute",
+        "location": "Rushdy, Alexandria",
+        "type": "Neurological Specialty",
+        "beds": 160,
+        "staff": 140,
+        "departments": ["Neurology", "Neurosurgery", "Neuroradiology"],
+        "modalities": ["MRI", "CT", "PET", "Angiography"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=600&h=350&fit=crop",
+        "institutionName": "Neuro Institute",
+    },
+    {
+        "id": 15,
+        "name": "Green Crescent Rehabilitation",
+        "location": "Montaza, Alexandria",
+        "type": "Rehabilitation Center",
+        "beds": 100,
+        "staff": 85,
+        "departments": ["Physical Therapy", "Occupational Therapy", "Speech Therapy"],
+        "modalities": ["X-Ray", "Ultrasound"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1512678080530-7760d81faba6?w=600&h=350&fit=crop",
+        "institutionName": "Green Crescent",
+    },
+    {
+        "id": 16,
+        "name": "Pharos Surgical Hospital",
+        "location": "Camp Caesar, Alexandria",
+        "type": "Surgical Specialty",
+        "beds": 220,
+        "staff": 190,
+        "departments": ["General Surgery", "Vascular Surgery", "Plastic Surgery"],
+        "modalities": ["CT", "X-Ray", "Ultrasound", "Fluoroscopy"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=600&h=350&fit=crop",
+        "institutionName": "Pharos Surgical",
+    },
+    {
+        "id": 17,
+        "name": "Royal Maternity Hospital",
+        "location": "San Stefano, Alexandria",
+        "type": "Maternity Hospital",
+        "beds": 130,
+        "staff": 110,
+        "departments": ["Labor & Delivery", "High-Risk Pregnancy", "NICU"],
+        "modalities": ["Ultrasound", "Fetal MRI", "Mammography"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1519483691394-c3fbe4dc2e8f?w=600&h=350&fit=crop",
+        "institutionName": "Royal Maternity",
+    },
+    {
+        "id": 18,
+        "name": "Alexandria Sports Medicine Clinic",
+        "location": "Sporting, Alexandria",
+        "type": "Sports Medicine",
+        "beds": 50,
+        "staff": 45,
+        "departments": ["Orthopedics", "Sports Rehabilitation", "Sports Nutrition"],
+        "modalities": ["MRI", "X-Ray", "Ultrasound"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=350&fit=crop",
+        "institutionName": "Sports Medicine",
+    },
+    {
+        "id": 19,
+        "name": "Corniche Cardiovascular Center",
+        "location": "Corniche, Alexandria",
+        "type": "Cardiovascular Specialty",
+        "beds": 170,
+        "staff": 155,
+        "departments": ["Cardiology", "Cardiac Surgery", "Vascular Surgery"],
+        "modalities": ["CT Angiography", "Cardiac MRI", "Echocardiography", "Nuclear"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?w=600&h=350&fit=crop",
+        "institutionName": "Corniche Cardiovascular",
+    },
+    {
+        "id": 20,
+        "name": "Al-Madina Polyclinic",
+        "location": "Moharam Bey, Alexandria",
+        "type": "Polyclinic",
+        "beds": 70,
+        "staff": 60,
+        "departments": ["Family Medicine", "Internal Medicine", "Pediatrics"],
+        "modalities": ["X-Ray", "Ultrasound"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1504439468489-c8920d796a29?w=600&h=350&fit=crop",
+        "institutionName": "Al-Madina",
+    },
+    {
+        "id": 21,
+        "name": "Bibliotheca Medical Complex",
+        "location": "Shatby, Alexandria",
+        "type": "Medical Complex",
+        "beds": 320,
+        "staff": 280,
+        "departments": ["Multi-Specialty", "Emergency", "Diagnostics"],
+        "modalities": ["CT", "MRI", "X-Ray", "Ultrasound", "Mammography"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=600&h=350&fit=crop",
+        "institutionName": "Bibliotheca Medical",
+    },
+    {
+        "id": 22,
+        "name": "Abu Qir Military Hospital",
+        "location": "Abu Qir, Alexandria",
+        "type": "Military Hospital",
+        "beds": 400,
+        "staff": 350,
+        "departments": ["All Specialties", "Military Medicine", "Trauma"],
+        "modalities": ["CT", "MRI", "X-Ray", "Ultrasound", "Nuclear"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1519494140681-03682a90037f?w=600&h=350&fit=crop",
+        "institutionName": "Abu Qir Military",
+    },
+    {
+        "id": 23,
+        "name": "Borg El Arab Diagnostic Center",
+        "location": "Borg El Arab, Alexandria",
+        "type": "Diagnostic Center",
+        "beds": 40,
+        "staff": 55,
+        "departments": ["Radiology", "Laboratory", "Cardiology"],
+        "modalities": ["CT", "MRI", "X-Ray", "Ultrasound"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=600&h=350&fit=crop",
+        "institutionName": "Borg El Arab Diagnostic",
+    },
+    {
+        "id": 24,
+        "name": "Victoria Hospital",
+        "location": "Victoria, Alexandria",
+        "type": "General Hospital",
+        "beds": 260,
+        "staff": 220,
+        "departments": ["Internal Medicine", "Surgery", "Pediatrics", "Emergency"],
+        "modalities": ["CT", "X-Ray", "Ultrasound"],
+        "status": "active",
+        "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=600&h=350&fit=crop",
+        "institutionName": "Victoria Hospital",
+    },
 ]
 
 
 async def get_token() -> str:
+    """Get authentication token from Keycloak"""
     url = f"{KEYCLOAK_URL}/realms/dcm4che/protocol/openid-connect/token"
     data = {
         "grant_type": "password",
@@ -200,8 +383,31 @@ async def get_token() -> str:
     return response.json()["access_token"]
 
 
+def get_archive_config(web_app_service: str = "dcm4chee-arc"):
+    """Get configuration for specified archive"""
+    if web_app_service not in ARCHIVE_CONFIGS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown archive: {web_app_service}. Available: {', '.join(ARCHIVE_CONFIGS.keys())}"
+        )
+    return ARCHIVE_CONFIGS[web_app_service]
+
+
+def clean_query_params(query_string: str) -> str:
+    """Remove webAppService from query parameters"""
+    if not query_string:
+        return ""
+    
+    params = parse_qs(query_string)
+    # Remove webAppService parameter
+    params.pop('webAppService', None)
+    
+    # Rebuild query string
+    return urlencode(params, doseq=True)
+
+
 # ============================================================================
-# HOSPITALS  ← NEW
+# HOSPITALS
 # ============================================================================
 
 @app.get("/api/hospitals")
@@ -219,39 +425,93 @@ async def get_hospital(hospital_id: int):
     raise HTTPException(status_code=404, detail="Hospital not found")
 
 
+@app.get("/api/archives")
+async def list_archives():
+    """List available DICOM archives/servers"""
+    return [
+        {
+            "id": key,
+            "name": key,
+            "description": config["description"],
+            "url": config["url"],
+            "status": "active"  # You could add health checks here
+        }
+        for key, config in ARCHIVE_CONFIGS.items()
+    ]
+
+
 # ============================================================================
 # PATIENTS
 # ============================================================================
 
 @app.get("/api/patients")
-async def search_patients(request: Request):
+async def search_patients(request: Request, webAppService: str = "dcm4chee-arc"):
+    """Search for patients in specified archive"""
     try:
-        token = await get_token()
-        query_params = str(request.url.query)
-        url = f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/patients?{query_params}"
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+        # Get archive configuration
+        archive = get_archive_config(webAppService)
+        
+        # Get authentication token if required
+        token = None
+        if archive["auth_required"]:
+            token = await get_token()
+        
+        # Clean query parameters (remove webAppService)
+        query_params = clean_query_params(str(request.url.query))
+        
+        # Build URL for selected archive
+        url = f"{archive['url']}{archive['path']}/patients"
+        if query_params:
+            url += f"?{query_params}"
+        
+        print(f"🔍 Searching patients in {webAppService}: {url}")
+        
+        # Build headers
+        headers = {"Accept": "application/dicom+json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        
+        # Make request to archive
         response = await client.get(url, headers=headers)
+        
         if response.status_code == 204:
             return []
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
+        
         return response.json()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/patients/{patient_id}/studies")
-async def get_patient_studies(patient_id: str):
+async def get_patient_studies(patient_id: str, webAppService: str = "dcm4chee-arc"):
+    """Get studies for a specific patient"""
     try:
-        token = await get_token()
-        url = f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/patients/{patient_id}/studies"
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+        archive = get_archive_config(webAppService)
+        
+        token = None
+        if archive["auth_required"]:
+            token = await get_token()
+        
+        url = f"{archive['url']}{archive['path']}/patients/{patient_id}/studies"
+        
+        headers = {"Accept": "application/dicom+json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        
         response = await client.get(url, headers=headers)
+        
         if response.status_code == 204:
             return []
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
+        
         return response.json()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -261,18 +521,43 @@ async def get_patient_studies(patient_id: str):
 # ============================================================================
 
 @app.get("/api/studies")
-async def search_studies(request: Request):
+async def search_studies(request: Request, webAppService: str = "dcm4chee-arc"):
+    """Search for studies in specified archive"""
     try:
-        token = await get_token()
-        query_params = str(request.url.query)
-        url = f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/studies?{query_params}"
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+        # Get archive configuration
+        archive = get_archive_config(webAppService)
+        
+        # Get authentication token if required
+        token = None
+        if archive["auth_required"]:
+            token = await get_token()
+        
+        # Clean query parameters (remove webAppService)
+        query_params = clean_query_params(str(request.url.query))
+        
+        # Build URL for selected archive
+        url = f"{archive['url']}{archive['path']}/studies"
+        if query_params:
+            url += f"?{query_params}"
+        
+        print(f"🔍 Searching studies in {webAppService}: {url}")
+        
+        # Build headers
+        headers = {"Accept": "application/dicom+json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        
+        # Make request to archive
         response = await client.get(url, headers=headers)
+        
         if response.status_code == 204:
             return []
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
+        
         return response.json()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -282,22 +567,35 @@ async def search_studies(request: Request):
 # ============================================================================
 
 @app.get("/api/mwl")
-async def search_mwl(request: Request):
+async def search_mwl(request: Request, webAppService: str = "dcm4chee-arc"):
+    """Search modality worklist in specified archive"""
     try:
-        token = await get_token()
-        query_params = str(request.url.query)
-        url = (
-            f"{DCM4CHEE_URL}"
-            "/dcm4chee-arc/aets/DCM4CHEE/rs/mwlitems"
-            f"?{query_params}"
-        )
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+        archive = get_archive_config(webAppService)
+        
+        token = None
+        if archive["auth_required"]:
+            token = await get_token()
+        
+        query_params = clean_query_params(str(request.url.query))
+        
+        url = f"{archive['url']}{archive['path']}/mwlitems"
+        if query_params:
+            url += f"?{query_params}"
+        
+        headers = {"Accept": "application/dicom+json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        
         response = await client.get(url, headers=headers)
+        
         if response.status_code == 204:
             return []
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
+        
         return response.json()
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -429,23 +727,12 @@ async def get_dashboard_stats():
 
 @app.get("/api/dashboard/hospital/{hospital_id}")
 async def get_hospital_dashboard(hospital_id: str):
-    """
-    Per-hospital dashboard.
-    Filters studies by InstitutionName matching the hospital registry entry.
-    Uses wildcard matching and falls back to network-wide data if empty.
-    """
+    """Per-hospital dashboard with InstitutionName filtering"""
     try:
         token   = await get_token()
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/dicom+json"
-        }
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
 
-        # ─────────────────────────────────────────────────────────────
-        # 1️⃣ Get InstitutionName from registry
-        # ─────────────────────────────────────────────────────────────
         institution_name = None
-
         try:
             hid = int(hospital_id)
             for h in HOSPITAL_REGISTRY:
@@ -455,83 +742,42 @@ async def get_hospital_dashboard(hospital_id: str):
         except (ValueError, TypeError):
             pass
 
-        # Debug logs
-        print("Hospital ID:", hospital_id)
-        print("InstitutionName:", institution_name)
-
-        # ─────────────────────────────────────────────────────────────
-        # 2️⃣ Build Studies Query (Wildcard Match)
-        # ─────────────────────────────────────────────────────────────
         query = "limit=1000&orderby=-StudyDate"
-
         if institution_name:
             query += f"&InstitutionName=*{institution_name}*"
 
-        studies_url = (
-            f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/studies?{query}"
-        )
-
-        print("Studies Query:", studies_url)
-
+        studies_url = f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/studies?{query}"
         studies_resp = await client.get(studies_url, headers=headers)
 
         studies_raw: list = []
-
         if studies_resp.status_code == 200:
             studies_raw = studies_resp.json() or []
         elif studies_resp.status_code not in (204, 404):
-            raise HTTPException(
-                status_code=studies_resp.status_code,
-                detail=studies_resp.text
-            )
+            raise HTTPException(status_code=studies_resp.status_code, detail=studies_resp.text)
 
-        # ─────────────────────────────────────────────────────────────
-        # 3️⃣ Patient Count Query
-        # ─────────────────────────────────────────────────────────────
         pat_query = "limit=1"
-
         if institution_name:
             pat_query += f"&InstitutionName=*{institution_name}*"
 
-        patients_url = (
-            f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/patients?{pat_query}"
-        )
-
-        print("Patients Query:", patients_url)
-
+        patients_url = f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/patients?{pat_query}"
         patients_resp = await client.get(patients_url, headers=headers)
 
         total_patients = 0
-
         if patients_resp.status_code == 200:
             total_patients = int(
                 patients_resp.headers.get("X-Total-Count", 0)
                 or len(patients_resp.json() or [])
             )
 
-        # ─────────────────────────────────────────────────────────────
-        # 4️⃣ Fallback — If No Institution Data Found
-        # ─────────────────────────────────────────────────────────────
         if not studies_raw:
-            print("⚠️ No studies found for hospital — using fallback data")
-
             fallback_resp = await client.get(
-                f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/studies"
-                "?limit=1000&orderby=-StudyDate",
+                f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/studies?limit=1000&orderby=-StudyDate",
                 headers=headers,
             )
-
             if fallback_resp.status_code == 200:
                 studies_raw = fallback_resp.json() or []
 
-        # ─────────────────────────────────────────────────────────────
-        # 5️⃣ Aggregate Stats
-        # ─────────────────────────────────────────────────────────────
-        return await _aggregate_stats(
-            studies_raw,
-            total_patients,
-            hospital_id=hospital_id
-        )
+        return await _aggregate_stats(studies_raw, total_patients, hospital_id=hospital_id)
 
     except HTTPException:
         raise
@@ -545,7 +791,7 @@ async def get_hospital_dashboard(hospital_id: str):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "archives": list(ARCHIVE_CONFIGS.keys())}
 
 
 if __name__ == "__main__":
