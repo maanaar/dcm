@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Background from "../components/background.jsx";
-// Dummy account credentials
+
+// Dummy account credentials (fallback)
 const DUMMY_ACCOUNT = {
   email: 'admin@hospital.com',
   password: 'admin123'
 };
+
+// Keycloak configuration
+const KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL || 'https://172.16.16.221:8843';
+const KEYCLOAK_REALM = 'dcm4che';
+const KEYCLOAK_CLIENT_ID = 'dcm4chee-arc-ui';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,31 +19,100 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [authMode, setAuthMode] = useState('static'); // 'keycloak' or 'static'
   const navigate = useNavigate();
 
   // Check for saved credentials on component mount
   useEffect(() => {
     const savedEmail = localStorage.getItem('rememberedEmail');
     const savedPassword = localStorage.getItem('rememberedPassword');
+    const savedAuthMode = localStorage.getItem('authMode') || 'static';
     
     if (savedEmail && savedPassword) {
       setEmail(savedEmail);
       setPassword(savedPassword);
       setRememberMe(true);
     }
+    setAuthMode(savedAuthMode);
   }, []);
+
+  // // Keycloak authentication
+  // const authenticateWithKeycloak = async (username, password) => {
+  //   try {
+  //     const tokenUrl = `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`;
+      
+  //     const formData = new URLSearchParams();
+  //     formData.append('grant_type', 'password');
+  //     formData.append('client_id', KEYCLOAK_CLIENT_ID);
+  //     formData.append('username', username);
+  //     formData.append('password', password);
+
+  //     const response = await fetch(tokenUrl, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/x-www-form-urlencoded',
+  //       },
+  //       body: formData.toString(),
+  //     });
+
+  //     if (!response.ok) {
+  //       const errorData = await response.json().catch(() => ({}));
+  //       throw new Error(errorData.error_description || 'Authentication failed');
+  //     }
+
+  //     const data = await response.json();
+  //     return {
+  //       accessToken: data.access_token,
+  //       refreshToken: data.refresh_token,
+  //       expiresIn: data.expires_in,
+  //     };
+  //   } catch (error) {
+  //     console.error('Keycloak authentication error:', error);
+  //     throw error;
+  //   }
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     try {
-      // Check against dummy account
-      if (email === DUMMY_ACCOUNT.email && password === DUMMY_ACCOUNT.password) {
+      let authSuccess = false;
+      let tokens = null;
+
+      if (authMode === 'keycloak') {
+        // Try Keycloak authentication first
+        try {
+          tokens = await authenticateWithKeycloak(email, password);
+          authSuccess = true;
+          
+          // Store Keycloak tokens
+          localStorage.setItem('authToken', tokens.accessToken);
+          localStorage.setItem('refreshToken', tokens.refreshToken);
+          localStorage.setItem('tokenExpiry', Date.now() + (tokens.expiresIn * 1000));
+          localStorage.setItem('authMode', 'keycloak');
+          
+        } catch (keycloakError) {
+          console.error('Keycloak auth failed:', keycloakError);
+          setError('Keycloak authentication failed. ' + keycloakError.message);
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // Static authentication
+        if (email === DUMMY_ACCOUNT.email && password === DUMMY_ACCOUNT.password) {
+          authSuccess = true;
+          localStorage.setItem('authToken', 'dummy-auth-token-12345');
+          localStorage.setItem('authMode', 'static');
+        } else {
+          setError('Invalid username or password. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      if (authSuccess) {
         // Handle "Remember Me"
         if (rememberMe) {
           localStorage.setItem('rememberedEmail', email);
@@ -47,15 +122,15 @@ export default function LoginPage() {
           localStorage.removeItem('rememberedPassword');
         }
 
-        // Store auth token (dummy)
-        localStorage.setItem('authToken', 'dummy-auth-token-12345');
+        // Store user info
         localStorage.setItem('userEmail', email);
+        localStorage.setItem('isAuthenticated', 'true');
 
-        // Login successful - redirect to mwl page
+        // Simulate slight delay for UX
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Login successful - redirect to patients page
         navigate('/patients');
-      } else {
-        setError('Invalid username or password. Please try again.');
-        setIsLoading(false);
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -66,21 +141,12 @@ export default function LoginPage() {
 
   return (
     <div className="w-full flex items-center justify-end relative">
-      {/* Card */}
-        <Background />
+      <Background />
       
-      <div className="flex flex-col min-h-screen space-y-6 w-[40%] justify-center mr-16  p-10 z-10">
-{/*         <span className="flex text-7xl justify-center  text-[rgb(215,160,56)] ">✴</span> */}
+      <div className="flex flex-col min-h-screen space-y-6 w-[40%] justify-center mr-16 p-10 z-10">
         <h1 className="text-5xl font-bold text-center text-white">Welcome Again!</h1>
         
         <h3 className="text-3xl font-semibold text-white text-center">Log in</h3>
-
-        {/* Demo Credentials Info
-        <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-sm">
-          <p className="font-semibold mb-1">Demo Credentials:</p>
-          <p>Email: admin@hospital.com</p>
-          <p>Password: admin123</p>
-        </div> */}
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -102,7 +168,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div  className="mt-6">
+          <div className="mt-6">
             <label className="block text-xl text-white mb-1">Password</label>
             <input
               type="password"

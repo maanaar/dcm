@@ -3,10 +3,10 @@
  * Connects to FastAPI backend for dcm4chee operations
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://172.16.16.221:8000/api';
 
 // ============================================================================
-// HOSPITALS API  ← NEW
+// HOSPITALS API
 // ============================================================================
 
 /**
@@ -69,6 +69,9 @@ export const searchPatients = async (formData) => {
     if (formData.orderBy)             queryParams.append('orderby', formData.orderBy);
     if (formData.onlyWithStudies)     queryParams.append('onlyWithStudies', 'true');
     if (formData.mergedPatients)      queryParams.append('merged', 'true');
+    
+    // ✅ Web App Service support
+    if (formData.webAppService)       queryParams.append('webAppService', formData.webAppService);
 
     const url = `${API_BASE}/patients?${queryParams.toString()}`;
     console.log('🔍 Searching patients:', url);
@@ -109,29 +112,47 @@ export const searchStudies = async (formData) => {
   try {
     const queryParams = new URLSearchParams();
 
+    // Patient Demographics
     if (formData.patientFamilyName) {
       const name = formData.fuzzyMatching
         ? `*${formData.patientFamilyName}*`
         : formData.patientFamilyName;
       queryParams.append('PatientName', name);
     }
-    if (formData.patientId)                   queryParams.append('PatientID', formData.patientId);
-    if (formData.issuerOfPatient)             queryParams.append('IssuerOfPatientID', formData.issuerOfPatient);
-    if (formData.accessionNumber)             queryParams.append('AccessionNumber', formData.accessionNumber);
-    if (formData.issuerOfAccessionNumber)     queryParams.append('IssuerOfAccessionNumberSequence', formData.issuerOfAccessionNumber);
-    if (formData.studyDescription)            queryParams.append('StudyDescription', formData.studyDescription);
-    if (formData.modality)                    queryParams.append('ModalitiesInStudy', formData.modality);
-    if (formData.referringPhysician)          queryParams.append('ReferringPhysicianName', formData.referringPhysician);
+    if (formData.patientId) queryParams.append('PatientID', formData.patientId);
+    if (formData.issuerOfPatient) queryParams.append('IssuerOfPatientID', formData.issuerOfPatient);
+    
+    // Study Identifiers
+    if (formData.accessionNumber) queryParams.append('AccessionNumber', formData.accessionNumber);
+    if (formData.issuerOfAccessionNumber) queryParams.append('IssuerOfAccessionNumberSequence', formData.issuerOfAccessionNumber);
+    
+    // Study Details
+    if (formData.studyDescription) queryParams.append('StudyDescription', formData.studyDescription);
+    if (formData.modality && formData.modality !== 'All') queryParams.append('ModalitiesInStudy', formData.modality);
+    if (formData.reportStatus) queryParams.append('CompletionFlag', formData.reportStatus);
+    
+    // Institutional Information
+    if (formData.institutionalName) queryParams.append('InstitutionName', formData.institutionalName);
     if (formData.institutionalDepartmentName) queryParams.append('InstitutionalDepartmentName', formData.institutionalDepartmentName);
-    if (formData.sendingAET)                  queryParams.append('SendingApplicationEntityTitleOfSeries', formData.sendingAET);
-    if (formData.studyDate)                   queryParams.append('StudyDate', formData.studyDate.replace(/-/g, ''));
-    if (formData.studyTime)                   queryParams.append('StudyTime', formData.studyTime.replace(/:/g, ''));
-    if (formData.studyReceived)               queryParams.append('StudyReceiveDateTime', formData.studyReceived.replace(/-/g, ''));
-    if (formData.studyAccess)                 queryParams.append('StudyAccessDateTime', formData.studyAccess.replace(/-/g, ''));
-    if (formData.limit)                       queryParams.append('limit', formData.limit);
-    if (formData.orderBy)                     queryParams.append('orderby', formData.orderBy);
+    if (formData.referringPhysician) queryParams.append('ReferringPhysicianName', formData.referringPhysician);
+    if (formData.sendingAET) queryParams.append('SendingApplicationEntityTitleOfSeries', formData.sendingAET);
+    
+    // Date/Time Fields
+    if (formData.studyDate) queryParams.append('StudyDate', formData.studyDate.replace(/-/g, ''));
+    if (formData.studyTime) queryParams.append('StudyTime', formData.studyTime.replace(/:/g, ''));
+    if (formData.studyReceived) queryParams.append('StudyReceiveDateTime', formData.studyReceived.replace(/-/g, ''));
+    if (formData.studyAccess) queryParams.append('StudyAccessDateTime', formData.studyAccess.replace(/-/g, ''));
+    
+    // Query Options
+    if (formData.limit) queryParams.append('limit', formData.limit);
+    if (formData.orderBy) queryParams.append('orderby', formData.orderBy);
+    
+    // ✅ Web App Service support - NOW FUNCTIONAL
+    if (formData.webAppService) queryParams.append('webAppService', formData.webAppService);
 
     const url = `${API_BASE}/studies?${queryParams.toString()}`;
+    console.log('🔍 Searching studies:', url);
+    
     const response = await fetch(url);
     if (!response.ok) {
       const errorText = await response.text();

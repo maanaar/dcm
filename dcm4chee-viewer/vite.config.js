@@ -5,7 +5,16 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: true,  // ✅ Added - allows external access
     port: 5173,
+    // ✅ Moved allowedHosts inside preview
+    preview: {
+      allowedHosts: [
+        'smart.nextasolutions.net',  
+        'localhost',
+        '172.16.16.221',
+      ]
+    },
     proxy: {
       // Proxy for dcm4chee API
       '/api': {
@@ -38,5 +47,15 @@ export default defineConfig({
         }
       }
     }
+  },
+  // ✅ Added preview section for production preview mode
+  preview: {
+    host: true,
+    port: 5173,
+    allowedHosts: [
+      'smart.nextasolutions.net',  
+      'localhost',
+      '172.16.16.221',
+    ]
   }
 })

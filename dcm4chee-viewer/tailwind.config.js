@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var( system-ui, Avenir, Helvetica, Arial)', 'sans-serif'],
+        sans: ['system-ui', 'Avenir', 'Helvetica', 'Arial', 'sans-serif'],
         montserrat: ['Montserrat', 'sans-serif'],
         lato: ['Lato', 'sans-serif'],
       },

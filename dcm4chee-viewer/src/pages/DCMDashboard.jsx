@@ -92,7 +92,7 @@ export default function DashboardPage() {
     if (!hospitals.length) return;
     // Fetch each hospital’s dashboard in parallel — silently ignore failures
     hospitals.forEach(h => {
-      fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000/api'}/dashboard/hospital/${h.id}`)
+      fetch(`${import.meta.env.VITE_API_BASE || 'http://172.16.16.221:8000/api'}/dashboard/hospital/${h.id}`)
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data) return;
