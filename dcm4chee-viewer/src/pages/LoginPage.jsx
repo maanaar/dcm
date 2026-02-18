@@ -140,13 +140,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full flex items-center justify-end relative">
-      <Background />
-      
-      <div className="flex flex-col min-h-screen space-y-6 w-[40%] justify-center mr-16 p-10 z-10">
-        <h1 className="text-5xl font-bold text-center text-white">Welcome Again!</h1>
+    <>
+    <div className="w-full flex flex-col lg:flex-row items-center justify-end relative ">
+        <Background />
+        <div className='h-[250px] md:h-[350px] lg:hidden'></div>
+      <div className="flex flex-col lg:min-h-screen space-y-6 w-full md:w-[50%] lg:w-[40%] justify-center m-auto p-7 lg:mr-16 lg:p-10 z-10">
+        <h1 className="text-3xl leading-4  lg:text-5xl font-bold text-center text-white">Welcome Again!</h1>
         
-        <h3 className="text-3xl font-semibold text-white text-center">Log in</h3>
+        <h3 className="text-xl leading-4 lg:text-3xl font-semibold text-white text-center">Log in</h3>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -198,12 +199,13 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-[25%] mx-auto mt-4 bg-[#076371] text-white py-2 px-3 rounded-full hover:bg-slate-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-[50%] md:w-[25%] mx-auto mt-4 bg-[#076371] text-white py-2 px-3 rounded-full hover:bg-slate-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Signing In...' : 'Log In'}
           </button>
         </form>
       </div>
-    </div>
+      </div>
+      </>
   );
 }
