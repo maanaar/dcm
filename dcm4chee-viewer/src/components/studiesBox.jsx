@@ -65,7 +65,7 @@ export default function StudiesBox() {
       {/* Header */}
       <div className="flex gap-2 px-6 py-3 border-b">
         <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" />
-        <h2 className="text-2xl mt-2 font-semibold">Studies</h2>
+        <h2 className="text-2xl mt-2 font-semibold text-gray-800">Studies</h2>
       </div>
 
       {/* Search Form */}

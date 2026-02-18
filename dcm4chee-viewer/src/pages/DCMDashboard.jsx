@@ -147,7 +147,7 @@ export default function DashboardPage() {
             {/* Title bar */}
             <div className="flex gap-2 px-6 py-3 border-b items-center">
               <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" />
-              <h2 className="text-2xl mt-1 font-semibold font-[montserrat]">Hospital Dashboard</h2>
+              <h2 className="text-2xl mt-1 font-semibold font-[montserrat] text-gray-800">Hospital Dashboard</h2>
               {(hospitalsError || statsError) && (
                 <span className="ml-auto text-xs text-red-500 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
                   ⚠️ {hospitalsError || statsError}

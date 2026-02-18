@@ -151,7 +151,7 @@ export default function SingleHospitalPage() {
               {/* Back button */}
               <button
                 onClick={() => navigate(-1)}
-                className="mr-1 p-2 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition"
+                className="mr-1 p-2 rounded-xl hover:bg-slate-900 bg-slate-100 text-slate-500 hover:text-slate-100 transition border-slate-500"
                 title="Back"
               >
                 ←
