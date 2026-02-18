@@ -11,8 +11,9 @@ app = FastAPI()
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://172.16.16.221:5173","http://localhost:5173","http://smart.nextasolutions.net:5173"],  # No trailing slash
+    # allow_origins=["http://172.16.16.221:5173","http://localhost:5173","http://smart.nextasolutions.net:5173","https://curalink.nextasolutions.net:5173"],  # No trailing slash
     allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

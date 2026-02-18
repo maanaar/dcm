@@ -7,10 +7,10 @@ export default defineConfig({
   server: {
     host: true,  // ✅ Added - allows external access
     port: 5173,
-    // ✅ Moved allowedHosts inside preview
     preview: {
       allowedHosts: [
         'smart.nextasolutions.net',  
+        'curalink.nextasolutions.net',
         'localhost',
         '172.16.16.221',
       ]
@@ -53,7 +53,8 @@ export default defineConfig({
     host: true,
     port: 5173,
     allowedHosts: [
-      'smart.nextasolutions.net',  
+      'smart.nextasolutions.net',
+      'curalink.nextasolutions.net',
       'localhost',
       '172.16.16.221',
     ]
