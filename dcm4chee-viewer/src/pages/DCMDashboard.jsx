@@ -198,6 +198,8 @@ export default function DashboardPage() {
                 <img
                   src={hospital.image}
                   alt={hospital.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover opacity-80"
                 />
                 <div className="absolute top-4 right-4">
