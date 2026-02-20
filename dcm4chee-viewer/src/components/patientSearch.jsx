@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchPatients, fetchWebApps } from '../services/dcmchee'; // Import the API function
+import { searchPatients, fetchApplicationEntities } from '../services/dcmchee'; // Import the API function
 
 export default function PatientSearch() {
   const navigate = useNavigate();
@@ -21,24 +21,25 @@ export default function PatientSearch() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
-  const [webApps, setWebApps] = useState([]);
+  const [applicationEntities, setApplicationEntities] = useState([]);
 
   useEffect(() => {
-    loadWebApps();
+    loadApplicationEntities();
   }, []);
 
-  const loadWebApps = async () => {
+  const loadApplicationEntities = async () => {
     try {
-      const apps = await fetchWebApps();
-      setWebApps(Array.isArray(apps) ? apps : []);
-      // Set first web app as default if available
-      if (apps.length > 0 && apps[0].webAppName) {
-        setFormData(prev => ({ ...prev, webAppService: apps[0].webAppName }));
+      const entities = await fetchApplicationEntities();
+      setApplicationEntities(Array.isArray(entities) ? entities : []);
+      if (entities.length > 0) {
+        const firstAE = typeof entities[0] === 'string' ? entities[0] : (entities[0].dicomAETitle || entities[0].aet);
+        if (firstAE) {
+          setFormData(prev => ({ ...prev, webAppService: firstAE }));
+        }
       }
     } catch (err) {
-      console.error('Error loading web apps:', err);
-      // Use default if loading fails
-      setWebApps([{ webAppName: 'dcm4chee-arc', description: 'DCM4CHEE Archive' }]);
+      console.error('Error loading application entities:', err);
+      setApplicationEntities(['DCM4CHEE']);
     }
   };
 
@@ -178,14 +179,18 @@ export default function PatientSearch() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317] text-gray-800"
               >
-                {webApps.length > 0 ? (
-                  webApps.map((app, idx) => (
-                    <option key={idx} value={app.webAppName || app.name}>
-                      {app.description || app.webAppName || app.name}
-                    </option>
-                  ))
+                {applicationEntities.length > 0 ? (
+                  applicationEntities.map((ae, idx) => {
+                    const aeTitle = typeof ae === 'string' ? ae : (ae.dicomAETitle || ae.aet);
+                    const aeDesc = typeof ae === 'object' ? (ae.dicomDescription || '') : '';
+                    return (
+                      <option key={idx} value={aeTitle}>
+                        {aeTitle}{aeDesc ? ` - ${aeDesc}` : ''}
+                      </option>
+                    );
+                  })
                 ) : (
-                  <option value="dcm4chee-arc">dcm4chee-arc</option>
+                  <option value="DCM4CHEE">DCM4CHEE</option>
                 )}
               </select>
             </div>
