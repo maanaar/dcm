@@ -27,31 +27,11 @@ PASSWORD     = os.getenv("DCM4CHEE_PASSWORD", "changeit")
 client = httpx.AsyncClient(verify=False)
 
 # ============================================================================
-# ARCHIVE CONFIGURATIONS - Multi-Archive Support
+# DCM4CHEE CONFIGURATION
 # ============================================================================
 
-ARCHIVE_CONFIGS = {
-    "dcm4chee-arc": {
-        "url": os.getenv("DCM4CHEE_URL", "http://172.16.16.221:8080"),
-        "path": "/dcm4chee-arc/aets/DCM4CHEE/rs",
-        "auth_required": True,
-        "description": "DCM4CHEE Archive 5.x"
-    },
-    "orthanc": {
-        "url": os.getenv("ORTHANC_URL", "http://172.16.16.221:8042"),
-        "path": "/dicom-web",
-        "auth_required": False,
-        "description": "Orthanc DICOM Server"
-    },
-    "conquest": {
-        "url": os.getenv("CONQUEST_URL", "http://172.16.16.221:5678"),
-        "path": "/wado",
-        "auth_required": False,
-        "description": "Conquest DICOM Server"
-    },
-}
-
-# Hospital data will be fetched dynamically from DICOM studies InstitutionName field
+# Single archive configuration for dcm4chee-arc
+DCM4CHEE_PATH = "/dcm4chee-arc/aets/DCM4CHEE/rs"
 
 
 async def get_token() -> str:
@@ -67,16 +47,6 @@ async def get_token() -> str:
     if response.status_code != 200:
         raise HTTPException(status_code=401, detail="Authentication failed")
     return response.json()["access_token"]
-
-
-def get_archive_config(web_app_service: str = "dcm4chee-arc"):
-    """Get configuration for specified archive"""
-    if web_app_service not in ARCHIVE_CONFIGS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unknown archive: {web_app_service}. Available: {', '.join(ARCHIVE_CONFIGS.keys())}"
-        )
-    return ARCHIVE_CONFIGS[web_app_service]
 
 
 def clean_query_params(query_string: str) -> str:
@@ -146,21 +116,6 @@ async def get_hospital(hospital_id: int):
     raise HTTPException(status_code=404, detail="Hospital not found")
 
 
-@app.get("/api/archives")
-async def list_archives():
-    """List available DICOM archives/servers"""
-    return [
-        {
-            "id": key,
-            "name": key,
-            "description": config["description"],
-            "url": config["url"],
-            "status": "active"  # You could add health checks here
-        }
-        for key, config in ARCHIVE_CONFIGS.items()
-    ]
-
-
 @app.get("/api/webapps")
 async def list_webapps():
     """List available DICOMweb application services from dcm4chee-arc"""
@@ -172,20 +127,12 @@ async def list_webapps():
         response = await client.get(url, headers=headers)
 
         if response.status_code != 200:
-            # Return default archives if web apps endpoint fails
-            return [
-                {"webAppName": key, "description": config["description"]}
-                for key, config in ARCHIVE_CONFIGS.items()
-            ]
+            return []
 
         return response.json()
     except Exception as e:
         print(f"Error fetching web apps: {e}")
-        # Return default archives as fallback
-        return [
-            {"webAppName": key, "description": config["description"]}
-            for key, config in ARCHIVE_CONFIGS.items()
-        ]
+        return []
 
 
 # ============================================================================
@@ -194,39 +141,34 @@ async def list_webapps():
 
 @app.get("/api/patients")
 async def search_patients(request: Request, webAppService: str = "dcm4chee-arc"):
-    """Search for patients in specified archive"""
+    """Search for patients in dcm4chee-arc"""
     try:
-        # Get archive configuration
-        archive = get_archive_config(webAppService)
-        
-        # Get authentication token if required
-        token = None
-        if archive["auth_required"]:
-            token = await get_token()
-        
+        token = await get_token()
+
         # Clean query parameters (remove webAppService)
         query_params = clean_query_params(str(request.url.query))
-        
-        # Build URL for selected archive
-        url = f"{archive['url']}{archive['path']}/patients"
+
+        # Build URL
+        url = f"{DCM4CHEE_URL}{DCM4CHEE_PATH}/patients"
         if query_params:
             url += f"?{query_params}"
-        
-        print(f"🔍 Searching patients in {webAppService}: {url}")
-        
+
+        print(f"🔍 Searching patients: {url}")
+
         # Build headers
-        headers = {"Accept": "application/dicom+json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        
-        # Make request to archive
+        headers = {
+            "Accept": "application/dicom+json",
+            "Authorization": f"Bearer {token}"
+        }
+
+        # Make request
         response = await client.get(url, headers=headers)
-        
+
         if response.status_code == 204:
             return []
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        
+
         return response.json()
     except HTTPException:
         raise
@@ -238,25 +180,22 @@ async def search_patients(request: Request, webAppService: str = "dcm4chee-arc")
 async def get_patient_studies(patient_id: str, webAppService: str = "dcm4chee-arc"):
     """Get studies for a specific patient"""
     try:
-        archive = get_archive_config(webAppService)
-        
-        token = None
-        if archive["auth_required"]:
-            token = await get_token()
-        
-        url = f"{archive['url']}{archive['path']}/patients/{patient_id}/studies"
-        
-        headers = {"Accept": "application/dicom+json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        
+        token = await get_token()
+
+        url = f"{DCM4CHEE_URL}{DCM4CHEE_PATH}/patients/{patient_id}/studies"
+
+        headers = {
+            "Accept": "application/dicom+json",
+            "Authorization": f"Bearer {token}"
+        }
+
         response = await client.get(url, headers=headers)
-        
+
         if response.status_code == 204:
             return []
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        
+
         return response.json()
     except HTTPException:
         raise
@@ -270,39 +209,34 @@ async def get_patient_studies(patient_id: str, webAppService: str = "dcm4chee-ar
 
 @app.get("/api/studies")
 async def search_studies(request: Request, webAppService: str = "dcm4chee-arc"):
-    """Search for studies in specified archive"""
+    """Search for studies in dcm4chee-arc"""
     try:
-        # Get archive configuration
-        archive = get_archive_config(webAppService)
-        
-        # Get authentication token if required
-        token = None
-        if archive["auth_required"]:
-            token = await get_token()
-        
+        token = await get_token()
+
         # Clean query parameters (remove webAppService)
         query_params = clean_query_params(str(request.url.query))
-        
-        # Build URL for selected archive
-        url = f"{archive['url']}{archive['path']}/studies"
+
+        # Build URL
+        url = f"{DCM4CHEE_URL}{DCM4CHEE_PATH}/studies"
         if query_params:
             url += f"?{query_params}"
-        
-        print(f"🔍 Searching studies in {webAppService}: {url}")
-        
+
+        print(f"🔍 Searching studies: {url}")
+
         # Build headers
-        headers = {"Accept": "application/dicom+json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        
-        # Make request to archive
+        headers = {
+            "Accept": "application/dicom+json",
+            "Authorization": f"Bearer {token}"
+        }
+
+        # Make request
         response = await client.get(url, headers=headers)
-        
+
         if response.status_code == 204:
             return []
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        
+
         return response.json()
     except HTTPException:
         raise
@@ -316,31 +250,28 @@ async def search_studies(request: Request, webAppService: str = "dcm4chee-arc"):
 
 @app.get("/api/mwl")
 async def search_mwl(request: Request, webAppService: str = "dcm4chee-arc"):
-    """Search modality worklist in specified archive"""
+    """Search modality worklist in dcm4chee-arc"""
     try:
-        archive = get_archive_config(webAppService)
-        
-        token = None
-        if archive["auth_required"]:
-            token = await get_token()
-        
+        token = await get_token()
+
         query_params = clean_query_params(str(request.url.query))
-        
-        url = f"{archive['url']}{archive['path']}/mwlitems"
+
+        url = f"{DCM4CHEE_URL}{DCM4CHEE_PATH}/mwlitems"
         if query_params:
             url += f"?{query_params}"
-        
-        headers = {"Accept": "application/dicom+json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        
+
+        headers = {
+            "Accept": "application/dicom+json",
+            "Authorization": f"Bearer {token}"
+        }
+
         response = await client.get(url, headers=headers)
-        
+
         if response.status_code == 204:
             return []
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        
+
         return response.json()
     except HTTPException:
         raise
@@ -540,25 +471,22 @@ async def get_hospital_dashboard(hospital_id: str):
 
 @app.get("/api/series")
 async def search_series(request: Request, webAppService: str = "dcm4chee-arc"):
-    """Search for series in specified archive"""
+    """Search for series in dcm4chee-arc"""
     try:
-        archive = get_archive_config(webAppService)
-
-        token = None
-        if archive["auth_required"]:
-            token = await get_token()
+        token = await get_token()
 
         query_params = clean_query_params(str(request.url.query))
 
-        url = f"{archive['url']}{archive['path']}/series"
+        url = f"{DCM4CHEE_URL}{DCM4CHEE_PATH}/series"
         if query_params:
             url += f"?{query_params}"
 
-        print(f"🔍 Searching series in {webAppService}: {url}")
+        print(f"🔍 Searching series: {url}")
 
-        headers = {"Accept": "application/dicom+json"}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
+        headers = {
+            "Accept": "application/dicom+json",
+            "Authorization": f"Bearer {token}"
+        }
 
         response = await client.get(url, headers=headers)
 
@@ -788,7 +716,7 @@ async def delete_export_rule(exporter_id: str):
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "archives": list(ARCHIVE_CONFIGS.keys())}
+    return {"status": "ok", "service": "dcm4chee-arc"}
 
 
 if __name__ == "__main__":

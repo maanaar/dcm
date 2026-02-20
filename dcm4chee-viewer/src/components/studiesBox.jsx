@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchStudies, fetchApplicationEntities } from '../services/dcmchee';
+import { searchStudies, fetchWebApps } from '../services/dcmchee';
 
 export default function StudiesBox() {
   const navigate = useNavigate();
@@ -24,27 +24,30 @@ export default function StudiesBox() {
     studyReceived: '',
     studyAccess: '',
     orderBy: 'StudyDate',
-    webAppService: 'dcm4chee-arc',
+    webAppService: '',
   });
 
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching]     = useState(false);
   const [error, setError]                 = useState(null);
-  const [applicationEntities, setApplicationEntities] = useState([]);
+  const [webApps, setWebApps] = useState([]);
 
   useEffect(() => {
-    loadApplicationEntities();
+    loadWebApps();
   }, []);
 
-  const loadApplicationEntities = async () => {
+  const loadWebApps = async () => {
     try {
-      const entities = await fetchApplicationEntities();
-      setApplicationEntities(Array.isArray(entities) ? entities : []);
-      // Default to "As Received" (no AE filter)
-      setFormData(prev => ({ ...prev, webAppService: 'AS_RECEIVED' }));
+      const apps = await fetchWebApps();
+      setWebApps(Array.isArray(apps) ? apps : []);
+      // Set default to first webapp if available
+      if (apps && apps.length > 0) {
+        const firstWebAppName = apps[0].webAppName || apps[0].dicomAETitle || apps[0];
+        setFormData(prev => ({ ...prev, webAppService: firstWebAppName }));
+      }
     } catch (err) {
-      console.error('Error loading application entities:', err);
-      setApplicationEntities([]);
+      console.error('Error loading web apps:', err);
+      setWebApps([]);
     }
   };
 
@@ -58,17 +61,7 @@ export default function StudiesBox() {
     setIsSearching(true);
     setError(null);
     try {
-      const searchData = { ...formData };
-
-      // Only apply AE filter if a specific AE is selected (not "As Received")
-      if (formData.webAppService && formData.webAppService !== 'AS_RECEIVED') {
-        searchData.sendingAET = formData.webAppService;
-      }
-
-      // Always use dcm4chee-arc for backend routing
-      searchData.webAppService = 'dcm4chee-arc';
-
-      const results = await searchStudies(searchData);
+      const results = await searchStudies(formData);
       setSearchResults(results);
       if (results.length === 0) setError('No studies found matching your criteria.');
     } catch (err) {
@@ -231,13 +224,12 @@ export default function StudiesBox() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
               >
-                <option value="AS_RECEIVED">As Received (All)</option>
-                {applicationEntities.map((ae, idx) => {
-                  const aeTitle = typeof ae === 'string' ? ae : (ae.dicomAETitle || ae.aet);
-                  const aeDesc = typeof ae === 'object' ? (ae.dicomDescription || '') : '';
+                {webApps.map((app, idx) => {
+                  const appName = typeof app === 'string' ? app : (app.webAppName || app.dicomAETitle);
+                  const appDesc = typeof app === 'object' ? (app.description || app.dicomDescription || '') : '';
                   return (
-                    <option key={idx} value={aeTitle}>
-                      {aeTitle}{aeDesc ? ` - ${aeDesc}` : ''}
+                    <option key={idx} value={appName}>
+                      {appName}{appDesc ? ` - ${appDesc}` : ''}
                     </option>
                   );
                 })}
