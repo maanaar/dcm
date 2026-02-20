@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { searchSeries } from '../services/dcmchee';
+import React, { useState, useEffect } from 'react';
+import { searchSeries, fetchWebApps } from '../services/dcmchee';
 
 export default function SeriesSearch() {
   const [formData, setFormData] = useState({
@@ -17,12 +17,29 @@ export default function SeriesSearch() {
     fuzzyMatching: false,
     orderBy: 'SeriesDate',
     webAppService: 'dcm4chee-arc',
-    limit: '10000',
   });
 
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
+  const [webApps, setWebApps] = useState([]);
+
+  useEffect(() => {
+    loadWebApps();
+  }, []);
+
+  const loadWebApps = async () => {
+    try {
+      const apps = await fetchWebApps();
+      setWebApps(apps);
+      if (apps.length > 0 && apps[0].webAppName) {
+        setFormData(prev => ({ ...prev, webAppService: apps[0].webAppName }));
+      }
+    } catch (err) {
+      console.error('Error loading web apps:', err);
+      setWebApps([{ webAppName: 'dcm4chee-arc', description: 'DCM4CHEE Archive' }]);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -228,23 +245,16 @@ export default function SeriesSearch() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
               >
-                <option value="dcm4chee-arc">DCM4CHEE Archive</option>
-                <option value="orthanc">Orthanc</option>
-                <option value="conquest">Conquest</option>
+                {webApps.length > 0 ? (
+                  webApps.map((app, idx) => (
+                    <option key={idx} value={app.webAppName || app.id || app.name}>
+                      {app.description || app.webAppName || app.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="dcm4chee-arc">DCM4CHEE Archive</option>
+                )}
               </select>
-            </div>
-
-            {/* Limit */}
-            <div>
-              <label className="block text-lg text-slate-600 mb-2">Limit</label>
-              <input
-                type="number"
-                name="limit"
-                value={formData.limit}
-                onChange={handleInputChange}
-                min="1"
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
-              />
             </div>
 
             {/* Order By */}
@@ -274,7 +284,7 @@ export default function SeriesSearch() {
                 patientFamilyName: '', patientId: '', studyInstanceUID: '', seriesInstanceUID: '',
                 seriesNumber: '', seriesDescription: '', modality: '', bodyPartExamined: '',
                 performingPhysician: '', seriesDate: '', seriesTime: '', fuzzyMatching: false,
-                orderBy: 'SeriesDate', webAppService: 'dcm4chee-arc', limit: '10000',
+                orderBy: 'SeriesDate', webAppService: 'dcm4chee-arc',
               })}
               className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-2xl font-semibold transition"
             >

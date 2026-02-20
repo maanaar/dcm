@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchPatients } from '../services/dcmchee'; // Import the API function
+import { searchPatients, fetchWebApps } from '../services/dcmchee'; // Import the API function
 
 export default function PatientSearch() {
   const navigate = useNavigate();
@@ -8,7 +8,6 @@ export default function PatientSearch() {
     patientFamilyName: '',
     patientId: '',
     issuerOfPatient: '',
-    limitOfPatients: '10000',
     orderBy: 'PatientName',
     patientSex: '',
     birthDate: '',
@@ -19,10 +18,29 @@ export default function PatientSearch() {
     mergedPatients: false
   });
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
+  const [webApps, setWebApps] = useState([]);
+
+  useEffect(() => {
+    loadWebApps();
+  }, []);
+
+  const loadWebApps = async () => {
+    try {
+      const apps = await fetchWebApps();
+      setWebApps(apps);
+      // Set first app as default if available
+      if (apps.length > 0 && apps[0].webAppName) {
+        setFormData(prev => ({ ...prev, webAppService: apps[0].webAppName }));
+      }
+    } catch (err) {
+      console.error('Error loading web apps:', err);
+      // Use default if loading fails
+      setWebApps([{ webAppName: 'dcm4chee-arc', description: 'DCM4CHEE Archive' }]);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -129,20 +147,6 @@ export default function PatientSearch() {
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317] text-gray-800"
               />
             </div>
-              {/* Limit of Patients */}
-            <div>
-              <label className="block text-lg   text-slate-600 mb-2 font-[lato]">
-                Limit of Patients
-              </label>
-              <input
-                type="number"
-                name="limitOfPatients"
-                value={formData.limitOfPatients}
-                onChange={handleInputChange}
-                min="1"
-                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317] text-gray-800"
-              />
-            </div>
 
             {/* Order By */}
             <div>
@@ -174,26 +178,22 @@ export default function PatientSearch() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317] text-gray-800"
               >
-                <option value="dcm4chee-arc">dcm4chee-arc</option>
-                <option value="orthanc">Orthanc</option>
-                <option value="conquest">Conquest DICOM</option>
+                {webApps.length > 0 ? (
+                  webApps.map((app, idx) => (
+                    <option key={idx} value={app.webAppName || app.id || app.name}>
+                      {app.description || app.webAppName || app.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="dcm4chee-arc">dcm4chee-arc</option>
+                )}
               </select>
             </div>
           </div>
 
-          {/* Advanced Section Toggle */}
-          <button
-            type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="mb-4 px-4 py-2  text-white rounded-2xl  hover:bg-[#05383d]  transition flex items-center gap-2 bg-[#0a6e79] focus:ring-2 focus:ring-[#00768317]-500"
-          >
-            {showAdvanced ? '▲ Close More Filters' : '▼ More Filters'}
-          </button>
-
           {/* Advanced Fields */}
-          {showAdvanced && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 p-4 bg-slate-50 rounded-lg">
-              {/* Patient's Sex */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 p-4 bg-slate-50 rounded-lg">
+            {/* Patient's Sex */}
               <div>
                 <label className="block text-sm text-slate-600 mb-2 font-[lato]">
                   Patient's Sex
@@ -266,8 +266,7 @@ export default function PatientSearch() {
                   Merged Patients
                 </label>
               </div>
-            </div>
-          )}
+          </div>
 
           {/* Submit and Clear Buttons */}
           <div className="flex  flex-row-reverse  gap-3">

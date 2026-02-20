@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchStudies } from '../services/dcmchee';
+import { searchStudies, fetchWebApps } from '../services/dcmchee';
 
 export default function StudiesBox() {
   const navigate = useNavigate();
@@ -25,12 +25,29 @@ export default function StudiesBox() {
     studyAccess: '',
     orderBy: 'StudyDate',
     webAppService: 'dcm4chee-arc',
-    limit: '10000',
   });
 
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching]     = useState(false);
   const [error, setError]                 = useState(null);
+  const [webApps, setWebApps] = useState([]);
+
+  useEffect(() => {
+    loadWebApps();
+  }, []);
+
+  const loadWebApps = async () => {
+    try {
+      const apps = await fetchWebApps();
+      setWebApps(apps);
+      if (apps.length > 0 && apps[0].webAppName) {
+        setFormData(prev => ({ ...prev, webAppService: apps[0].webAppName }));
+      }
+    } catch (err) {
+      console.error('Error loading web apps:', err);
+      setWebApps([{ webAppName: 'dcm4chee-arc', description: 'DCM4CHEE Archive' }]);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -193,6 +210,27 @@ export default function StudiesBox() {
                 <option value="Done">Done</option>
                 <option value="Send">Send</option>
                 <option value="Failed">Failed</option>
+              </select>
+            </div>
+
+            {/* Web App Service */}
+            <div>
+              <label className="block text-lg text-slate-600 mb-2">Archive</label>
+              <select
+                name="webAppService"
+                value={formData.webAppService}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
+              >
+                {webApps.length > 0 ? (
+                  webApps.map((app, idx) => (
+                    <option key={idx} value={app.webAppName || app.id || app.name}>
+                      {app.description || app.webAppName || app.name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="dcm4chee-arc">DCM4CHEE Archive</option>
+                )}
               </select>
             </div>
           </div>

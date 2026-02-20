@@ -161,6 +161,33 @@ async def list_archives():
     ]
 
 
+@app.get("/api/webapps")
+async def list_webapps():
+    """List available DICOMweb application services from dcm4chee-arc"""
+    try:
+        token = await get_token()
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/ui2/rs/webapps"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get(url, headers=headers)
+
+        if response.status_code != 200:
+            # Return default archives if web apps endpoint fails
+            return [
+                {"webAppName": key, "description": config["description"]}
+                for key, config in ARCHIVE_CONFIGS.items()
+            ]
+
+        return response.json()
+    except Exception as e:
+        print(f"Error fetching web apps: {e}")
+        # Return default archives as fallback
+        return [
+            {"webAppName": key, "description": config["description"]}
+            for key, config in ARCHIVE_CONFIGS.items()
+        ]
+
+
 # ============================================================================
 # PATIENTS
 # ============================================================================

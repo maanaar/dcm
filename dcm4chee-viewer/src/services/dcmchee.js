@@ -550,6 +550,41 @@ export const deleteExportRule = async (exporterId) => {
 };
 
 // ============================================================================
+// WEB APPLICATIONS / ARCHIVES
+// ============================================================================
+
+export const fetchWebApps = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/webapps`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch web apps: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching web apps:', error);
+    // Return default fallback
+    return [
+      { webAppName: 'dcm4chee-arc', description: 'DCM4CHEE Archive 5.x' }
+    ];
+  }
+};
+
+export const fetchArchives = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/archives`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch archives: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching archives:', error);
+    return [];
+  }
+};
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 
