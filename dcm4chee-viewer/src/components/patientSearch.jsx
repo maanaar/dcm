@@ -55,12 +55,17 @@ export default function PatientSearch() {
     e.preventDefault();
     setIsSearching(true);
     setError(null);
-    
+
     try {
-      // Call the real API
-      const results = await searchPatients(formData);
+      // Use the selected AE title for filtering, with "dcm4chee-arc" for backend routing
+      const searchData = {
+        ...formData,
+        sendingAET: formData.webAppService, // Use selected AE as filter
+        webAppService: 'dcm4chee-arc' // Backend archive
+      };
+      const results = await searchPatients(searchData);
       setSearchResults(results);
-      
+
       if (results.length === 0) {
         setError('No patients found matching your criteria.');
       }

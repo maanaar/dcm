@@ -54,7 +54,13 @@ export default function SeriesSearch() {
     setIsSearching(true);
     setError(null);
     try {
-      const results = await searchSeries(formData);
+      // Use the selected AE title for filtering, with "dcm4chee-arc" for backend routing
+      const searchData = {
+        ...formData,
+        sendingAET: formData.webAppService, // Use selected AE as filter
+        webAppService: 'dcm4chee-arc' // Backend archive
+      };
+      const results = await searchSeries(searchData);
       setSearchResults(results);
       if (results.length === 0) setError('No series found matching your criteria.');
     } catch (err) {
