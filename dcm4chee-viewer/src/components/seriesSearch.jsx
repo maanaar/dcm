@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { searchSeries, fetchWebApps } from '../services/dcmchee';
+import { searchSeries, fetchApplicationEntities } from '../services/dcmchee';
 
 export default function SeriesSearch() {
   const [formData, setFormData] = useState({
@@ -22,24 +22,24 @@ export default function SeriesSearch() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
-  const [webApps, setWebApps] = useState([]);
+  const [applicationEntities, setApplicationEntities] = useState([]);
 
   useEffect(() => {
-    loadWebApps();
+    loadApplicationEntities();
   }, []);
 
-  const loadWebApps = async () => {
+  const loadApplicationEntities = async () => {
     try {
-      const apps = await fetchWebApps();
-      setWebApps(Array.isArray(apps) ? apps : []);
-      // Set default to first webapp if available
-      if (apps && apps.length > 0) {
-        const firstWebAppName = apps[0].webAppName || apps[0].dicomAETitle || apps[0];
-        setFormData(prev => ({ ...prev, webAppService: firstWebAppName }));
+      const entities = await fetchApplicationEntities();
+      setApplicationEntities(Array.isArray(entities) ? entities : []);
+      // Set default to first AE if available
+      if (entities && entities.length > 0) {
+        const firstAE = entities[0].dicomAETitle || entities[0];
+        setFormData(prev => ({ ...prev, webAppService: firstAE }));
       }
     } catch (err) {
-      console.error('Error loading web apps:', err);
-      setWebApps([]);
+      console.error('Error loading application entities:', err);
+      setApplicationEntities([]);
     }
   };
 
@@ -247,12 +247,12 @@ export default function SeriesSearch() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
               >
-                {webApps.map((app, idx) => {
-                  const appName = typeof app === 'string' ? app : (app.webAppName || app.dicomAETitle);
-                  const appDesc = typeof app === 'object' ? (app.description || app.dicomDescription || '') : '';
+                {applicationEntities.map((ae, idx) => {
+                  const aeTitle = typeof ae === 'string' ? ae : ae.dicomAETitle;
+                  const aeDesc = typeof ae === 'object' ? (ae.dicomDescription || ae.dcmDescription || '') : '';
                   return (
-                    <option key={idx} value={appName}>
-                      {appName}{appDesc ? ` - ${appDesc}` : ''}
+                    <option key={idx} value={aeTitle}>
+                      {aeTitle}{aeDesc ? ` - ${aeDesc}` : ''}
                     </option>
                   );
                 })}
