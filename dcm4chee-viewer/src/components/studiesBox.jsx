@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchStudies, fetchApplicationEntities } from '../services/dcmchee';
+import { searchStudies, fetchWebApps } from '../services/dcmchee';
 
 export default function StudiesBox() {
   const navigate = useNavigate();
@@ -30,25 +30,22 @@ export default function StudiesBox() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching]     = useState(false);
   const [error, setError]                 = useState(null);
-  const [applicationEntities, setApplicationEntities] = useState([]);
+  const [webApps, setWebApps] = useState([]);
 
   useEffect(() => {
-    loadApplicationEntities();
+    loadWebApps();
   }, []);
 
-  const loadApplicationEntities = async () => {
+  const loadWebApps = async () => {
     try {
-      const aes = await fetchApplicationEntities();
-      setApplicationEntities(Array.isArray(aes) ? aes : []);
-      if (aes.length > 0) {
-        const firstAE = typeof aes[0] === 'string' ? aes[0] : (aes[0].dicomAETitle || aes[0].aet);
-        if (firstAE) {
-          setFormData(prev => ({ ...prev, webAppService: firstAE }));
-        }
+      const apps = await fetchWebApps();
+      setWebApps(Array.isArray(apps) ? apps : []);
+      if (apps.length > 0 && apps[0].webAppName) {
+        setFormData(prev => ({ ...prev, webAppService: apps[0].webAppName }));
       }
     } catch (err) {
-      console.error('Error loading Application Entities:', err);
-      setApplicationEntities([]);
+      console.error('Error loading web apps:', err);
+      setWebApps([{ webAppName: 'dcm4chee-arc', description: 'DCM4CHEE Archive' }]);
     }
   };
 

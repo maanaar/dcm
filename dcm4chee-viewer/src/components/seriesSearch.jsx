@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { searchSeries, fetchApplicationEntities } from '../services/dcmchee';
+import { searchSeries, fetchWebApps } from '../services/dcmchee';
 
 export default function SeriesSearch() {
   const [formData, setFormData] = useState({
@@ -22,25 +22,22 @@ export default function SeriesSearch() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
-  const [applicationEntities, setApplicationEntities] = useState([]);
+  const [webApps, setWebApps] = useState([]);
 
   useEffect(() => {
-    loadApplicationEntities();
+    loadWebApps();
   }, []);
 
-  const loadApplicationEntities = async () => {
+  const loadWebApps = async () => {
     try {
-      const aes = await fetchApplicationEntities();
-      setApplicationEntities(Array.isArray(aes) ? aes : []);
-      if (aes.length > 0) {
-        const firstAE = typeof aes[0] === 'string' ? aes[0] : (aes[0].dicomAETitle || aes[0].aet);
-        if (firstAE) {
-          setFormData(prev => ({ ...prev, webAppService: firstAE }));
-        }
+      const apps = await fetchWebApps();
+      setWebApps(Array.isArray(apps) ? apps : []);
+      if (apps.length > 0 && apps[0].webAppName) {
+        setFormData(prev => ({ ...prev, webAppService: apps[0].webAppName }));
       }
     } catch (err) {
-      console.error('Error loading Application Entities:', err);
-      setApplicationEntities([]);
+      console.error('Error loading web apps:', err);
+      setWebApps([{ webAppName: 'dcm4chee-arc', description: 'DCM4CHEE Archive' }]);
     }
   };
 
@@ -239,7 +236,7 @@ export default function SeriesSearch() {
               />
             </div>
 
-            {/* Application Entity */}
+            {/* Web App Service */}
             <div>
               <label className="block text-lg text-slate-600 mb-2">Web App Service</label>
               <select
@@ -248,18 +245,14 @@ export default function SeriesSearch() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
               >
-                {applicationEntities.length > 0 ? (
-                  applicationEntities.map((ae, idx) => {
-                    const aeTitle = typeof ae === 'string' ? ae : (ae.dicomAETitle || ae.aet);
-                    const aeDesc = typeof ae === 'object' ? (ae.dicomDescription || '') : '';
-                    return (
-                      <option key={idx} value={aeTitle}>
-                        {aeTitle}{aeDesc ? ` - ${aeDesc}` : ''}
-                      </option>
-                    );
-                  })
+                {webApps.length > 0 ? (
+                  webApps.map((app, idx) => (
+                    <option key={idx} value={app.webAppName || app.name}>
+                      {app.description || app.webAppName || app.name}
+                    </option>
+                  ))
                 ) : (
-                  <option value="DCM4CHEE">DCM4CHEE</option>
+                  <option value="dcm4chee-arc">DCM4CHEE Archive</option>
                 )}
               </select>
             </div>
