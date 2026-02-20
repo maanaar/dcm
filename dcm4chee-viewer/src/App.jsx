@@ -1,12 +1,31 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import MWLPage from "./pages/mwl.jsx";
-import PatientsPage from "./pages/PatientPage.jsx";
+import { lazy, Suspense } from "react";
 import Navbar from "./components/navbar.jsx";
-import StudiesPage from "./pages/studies.jsx";
-import LoginPage from "./pages/LoginPage.jsx";
-import DashboardPage from "./pages/DCMDashboard.jsx";
 import Background from "./components/background.jsx";
-import SingleHospitalPage from "./components/singleHospital.jsx";
+
+// Lazy load all pages
+const MWLPage = lazy(() => import("./pages/mwl.jsx"));
+const PatientsPage = lazy(() => import("./pages/PatientPage.jsx"));
+const StudiesPage = lazy(() => import("./pages/studies.jsx"));
+const LoginPage = lazy(() => import("./pages/LoginPage.jsx"));
+const DashboardPage = lazy(() => import("./pages/DCMDashboard.jsx"));
+const SingleHospitalPage = lazy(() => import("./components/singleHospital.jsx"));
+const AppEntitiesList = lazy(() => import("./pages/AppEntitiesList.jsx"));
+const SeriesPage = lazy(() => import("./pages/SeriesPage.jsx"));
+const DevicesPage = lazy(() => import("./pages/DevicesPage.jsx"));
+const AEListPage = lazy(() => import("./pages/AEListPage.jsx"));
+const HL7ApplicationPage = lazy(() => import("./pages/HL7ApplicationPage.jsx"));
+const RoutingRolesPage = lazy(() => import("./pages/RoutingRolesPage.jsx"));
+
+// Loading component
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="text-center">
+      <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#14A3B8]"></div>
+      <p className="mt-4 text-gray-600">Loading...</p>
+    </div>
+  </div>
+);
 function AppContent() {
   const location = useLocation();
   const hideNavbar = location.pathname === "/login";
@@ -19,15 +38,31 @@ function AppContent() {
         {!hideNavbar && <Navbar />}
 
         <main className="w-full flex-1">
-          <Routes>
-            <Route path="/" element={<Navigate to="/login" />} />
-            {/* <Route path="/mwl" element={<MWLPage />} /> */}
-            <Route path="/patients" element={<PatientsPage />} />
-            <Route path="/studies" element={<StudiesPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/dashboard" element={<DashboardPage/>} />
-            <Route path="/hospital/:id" element={<SingleHospitalPage />} />
-          </Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/login" />} />
+              <Route path="/login" element={<LoginPage />} />
+
+              {/* Dashboard Routes */}
+              <Route path="/dashboard" element={<DashboardPage/>} />
+              <Route path="/hospital/:id" element={<SingleHospitalPage />} />
+              <Route path="/app-entities" element={<AppEntitiesList />} />
+
+              {/* Navigation Routes */}
+              <Route path="/patients" element={<PatientsPage />} />
+              <Route path="/studies" element={<StudiesPage />} />
+              <Route path="/series" element={<SeriesPage />} />
+
+              {/* Configuration Routes */}
+              <Route path="/devices" element={<DevicesPage />} />
+              <Route path="/ae-list" element={<AEListPage />} />
+              <Route path="/hl7-application" element={<HL7ApplicationPage />} />
+              <Route path="/routing-roles" element={<RoutingRolesPage />} />
+
+              {/* Other Routes */}
+              <Route path="/mwl" element={<MWLPage />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </div>

@@ -313,6 +313,189 @@ export const transformMWLData = (dicomData) => {
 };
 
 // ============================================================================
+// SERIES API
+// ============================================================================
+
+export const searchSeries = async (formData) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    // Patient Demographics
+    if (formData.patientFamilyName) {
+      const name = formData.fuzzyMatching
+        ? `*${formData.patientFamilyName}*`
+        : formData.patientFamilyName;
+      queryParams.append('PatientName', name);
+    }
+    if (formData.patientId) queryParams.append('PatientID', formData.patientId);
+
+    // Study/Series Identifiers
+    if (formData.studyInstanceUID) queryParams.append('StudyInstanceUID', formData.studyInstanceUID);
+    if (formData.seriesInstanceUID) queryParams.append('SeriesInstanceUID', formData.seriesInstanceUID);
+    if (formData.seriesNumber) queryParams.append('SeriesNumber', formData.seriesNumber);
+
+    // Series Details
+    if (formData.seriesDescription) queryParams.append('SeriesDescription', formData.seriesDescription);
+    if (formData.modality && formData.modality !== 'All') queryParams.append('Modality', formData.modality);
+    if (formData.bodyPartExamined) queryParams.append('BodyPartExamined', formData.bodyPartExamined);
+
+    // Performing Physician
+    if (formData.performingPhysician) queryParams.append('PerformingPhysicianName', formData.performingPhysician);
+
+    // Date/Time
+    if (formData.seriesDate) queryParams.append('SeriesDate', formData.seriesDate.replace(/-/g, ''));
+    if (formData.seriesTime) queryParams.append('SeriesTime', formData.seriesTime.replace(/:/g, ''));
+
+    // Query Options
+    if (formData.limit) queryParams.append('limit', formData.limit);
+    if (formData.orderBy) queryParams.append('orderby', formData.orderBy);
+    if (formData.webAppService) queryParams.append('webAppService', formData.webAppService);
+
+    const url = `${API_BASE}/series?${queryParams.toString()}`;
+    console.log('🔍 Searching series:', url);
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Search failed: ${response.status} - ${errorText}`);
+    }
+
+    return transformSeriesData(await response.json());
+  } catch (error) {
+    console.error('❌ Error searching series:', error);
+    throw error;
+  }
+};
+
+const transformSeriesData = (dicomData) => {
+  if (!Array.isArray(dicomData)) return [];
+  return dicomData.map((series, index) => {
+    const getValue = (tag, vr = 'Value', idx = 0) => series[tag]?.[vr]?.[idx] || '';
+
+    const seriesDate = getValue('00080021');
+    const formattedDate = seriesDate && seriesDate.length === 8
+      ? `${seriesDate.slice(0, 4)}-${seriesDate.slice(4, 6)}-${seriesDate.slice(6, 8)}`
+      : seriesDate;
+
+    const seriesTime = getValue('00080031');
+    const formattedTime = seriesTime && seriesTime.length >= 6
+      ? `${seriesTime.slice(0, 2)}:${seriesTime.slice(2, 4)}:${seriesTime.slice(4, 6)}`
+      : seriesTime;
+
+    return {
+      id: getValue('0020000E') || `series_${index}`,
+      seriesInstanceUID: getValue('0020000E'),
+      seriesNumber: getValue('00200011'),
+      seriesDescription: getValue('0008103E'),
+      modality: getValue('00080060'),
+      bodyPartExamined: getValue('00180015'),
+      performingPhysician: getValue('00081050'),
+      seriesDate: formattedDate,
+      seriesTime: formattedTime,
+      numberOfInstances: getValue('00201209'),
+      studyInstanceUID: getValue('0020000D'),
+      rawData: series,
+    };
+  });
+};
+
+// ============================================================================
+// DEVICES CONFIGURATION API
+// ============================================================================
+
+export const fetchDevices = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/devices`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch devices: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching devices:', error);
+    throw error;
+  }
+};
+
+export const fetchDevice = async (deviceName) => {
+  try {
+    const response = await fetch(`${API_BASE}/devices/${encodeURIComponent(deviceName)}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch device: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching device:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// APPLICATION ENTITIES (AE TITLES) API
+// ============================================================================
+
+export const fetchApplicationEntities = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/aes`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch AEs: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching Application Entities:', error);
+    throw error;
+  }
+};
+
+export const fetchApplicationEntity = async (aet) => {
+  try {
+    const response = await fetch(`${API_BASE}/aes/${encodeURIComponent(aet)}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch AE: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching Application Entity:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// HL7 APPLICATIONS API
+// ============================================================================
+
+export const fetchHL7Applications = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/hl7apps`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch HL7 apps: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching HL7 Applications:', error);
+    throw error;
+  }
+};
+
+export const fetchHL7Application = async (hl7AppName) => {
+  try {
+    const response = await fetch(`${API_BASE}/hl7apps/${encodeURIComponent(hl7AppName)}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch HL7 app: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching HL7 Application:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 

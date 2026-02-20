@@ -787,6 +787,184 @@ async def get_hospital_dashboard(hospital_id: str):
 
 
 # ============================================================================
+# SERIES
+# ============================================================================
+
+@app.get("/api/series")
+async def search_series(request: Request, webAppService: str = "dcm4chee-arc"):
+    """Search for series in specified archive"""
+    try:
+        archive = get_archive_config(webAppService)
+
+        token = None
+        if archive["auth_required"]:
+            token = await get_token()
+
+        query_params = clean_query_params(str(request.url.query))
+
+        url = f"{archive['url']}{archive['path']}/series"
+        if query_params:
+            url += f"?{query_params}"
+
+        print(f"🔍 Searching series in {webAppService}: {url}")
+
+        headers = {"Accept": "application/dicom+json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        response = await client.get(url, headers=headers)
+
+        if response.status_code == 204:
+            return []
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# DEVICES CONFIGURATION
+# ============================================================================
+
+@app.get("/api/devices")
+async def list_devices():
+    """List all configured DICOM devices"""
+    try:
+        token = await get_token()
+
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/devices"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/devices/{device_name}")
+async def get_device(device_name: str):
+    """Get specific device configuration"""
+    try:
+        token = await get_token()
+
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{device_name}"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# APPLICATION ENTITIES (AE TITLES)
+# ============================================================================
+
+@app.get("/api/aes")
+async def list_application_entities():
+    """List all Application Entity Titles"""
+    try:
+        token = await get_token()
+
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/aes"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/aes/{aet}")
+async def get_application_entity(aet: str):
+    """Get specific Application Entity configuration"""
+    try:
+        token = await get_token()
+
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/aes/{aet}"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# HL7 APPLICATIONS
+# ============================================================================
+
+@app.get("/api/hl7apps")
+async def list_hl7_applications():
+    """List all HL7 applications"""
+    try:
+        token = await get_token()
+
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/hl7apps"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/hl7apps/{hl7_app_name}")
+async def get_hl7_application(hl7_app_name: str):
+    """Get specific HL7 application configuration"""
+    try:
+        token = await get_token()
+
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/hl7apps/{hl7_app_name}"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
 # HEALTH
 # ============================================================================
 
