@@ -496,6 +496,60 @@ export const fetchHL7Application = async (hl7AppName) => {
 };
 
 // ============================================================================
+// EXPORT / ROUTING RULES API
+// ============================================================================
+
+export const fetchExportRules = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/export-rules`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch export rules: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching export rules:', error);
+    throw error;
+  }
+};
+
+export const createExportRule = async (ruleData) => {
+  try {
+    const response = await fetch(`${API_BASE}/export-rules`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(ruleData),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create export rule: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error creating export rule:', error);
+    throw error;
+  }
+};
+
+export const deleteExportRule = async (exporterId) => {
+  try {
+    const response = await fetch(`${API_BASE}/export-rules/${encodeURIComponent(exporterId)}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to delete export rule: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error deleting export rule:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 

@@ -51,322 +51,7 @@ ARCHIVE_CONFIGS = {
     },
 }
 
-# ─── Static hospital registry (server-side) ───────────────────────────────────
-# In a real deployment, replace this with a database query
-HOSPITAL_REGISTRY = [
-    {
-        "id": 1,
-        "name": "City General Hospital",
-        "location": "Downtown, Alexandria",
-        "type": "General Hospital",
-        "beds": 450,
-        "staff": 320,
-        "departments": ["Cardiology", "Neurology", "Orthopedics", "Emergency"],
-        "modalities": ["CT", "MRI", "X-Ray", "Ultrasound"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=600&h=350&fit=crop",
-        "institutionName": "City General",
-    },
-    {
-        "id": 2,
-        "name": "St. Mary Medical Center",
-        "location": "North District, Alexandria",
-        "type": "Specialized Center",
-        "beds": 280,
-        "staff": 210,
-        "departments": ["Oncology", "Radiology", "Surgery"],
-        "modalities": ["CT", "PET-CT", "MRI"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=600&h=350&fit=crop",
-        "institutionName": "St. Mary",
-    },
-    {
-        "id": 3,
-        "name": "Alexandria Children's Hospital",
-        "location": "West Side, Alexandria",
-        "type": "Pediatric Hospital",
-        "beds": 200,
-        "staff": 180,
-        "departments": ["Pediatrics", "NICU", "Pediatric Surgery"],
-        "modalities": ["X-Ray", "Ultrasound", "MRI"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1632833239869-a37e3a5806d2?w=600&h=350&fit=crop",
-        "institutionName": "Children Hospital",
-    },
-    {
-        "id": 4,
-        "name": "Eastern Regional Medical",
-        "location": "East Alexandria",
-        "type": "Regional Hospital",
-        "beds": 350,
-        "staff": 270,
-        "departments": ["Emergency", "ICU", "General Medicine"],
-        "modalities": ["CT", "X-Ray", "Ultrasound", "Mammography"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=600&h=350&fit=crop",
-        "institutionName": "Eastern Regional",
-    },
-    {
-        "id": 5,
-        "name": "Coastal Heart Institute",
-        "location": "Waterfront, Alexandria",
-        "type": "Cardiac Specialty",
-        "beds": 150,
-        "staff": 130,
-        "departments": ["Cardiology", "Cardiac Surgery", "Interventional"],
-        "modalities": ["CT Angiography", "Echocardiography", "Nuclear"],
-        "status": "maintenance",
-        "image": "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=600&h=350&fit=crop",
-        "institutionName": "Coastal Heart",
-    },
-    {
-        "id": 6,
-        "name": "University Teaching Hospital",
-        "location": "University District, Alexandria",
-        "type": "Teaching Hospital",
-        "beds": 550,
-        "staff": 420,
-        "departments": ["All Specialties", "Research", "Emergency"],
-        "modalities": ["CT", "MRI", "PET-CT", "X-Ray", "Ultrasound", "Nuclear"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1596541223130-5d31a73fb6c6?w=600&h=350&fit=crop",
-        "institutionName": "University Hospital",
-    },
-    {
-        "id": 7,
-        "name": "Sunrise Diagnostic Center",
-        "location": "Sidi Gaber, Alexandria",
-        "type": "Diagnostic Center",
-        "beds": 80,
-        "staff": 90,
-        "departments": ["Radiology", "Pathology", "Nuclear Medicine"],
-        "modalities": ["CT", "MRI", "PET-CT", "X-Ray"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=600&h=350&fit=crop",
-        "institutionName": "Sunrise Diagnostic",
-    },
-    {
-        "id": 8,
-        "name": "Al-Salam Orthopedic Hospital",
-        "location": "Smouha, Alexandria",
-        "type": "Orthopedic Specialty",
-        "beds": 120,
-        "staff": 100,
-        "departments": ["Orthopedics", "Physiotherapy", "Spine Surgery"],
-        "modalities": ["X-Ray", "MRI", "CT"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=600&h=350&fit=crop",
-        "institutionName": "Al-Salam Orthopedic",
-    },
-    {
-        "id": 9,
-        "name": "Nile Eye & ENT Center",
-        "location": "Miami, Alexandria",
-        "type": "Specialized Center",
-        "beds": 60,
-        "staff": 75,
-        "departments": ["Ophthalmology", "ENT", "Audiology"],
-        "modalities": ["Ultrasound", "X-Ray"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1551076805-e1869033e561?w=600&h=350&fit=crop",
-        "institutionName": "Nile Eye ENT",
-    },
-    {
-        "id": 10,
-        "name": "Cleopatra Women's Hospital",
-        "location": "Gleem, Alexandria",
-        "type": "Women's Health",
-        "beds": 180,
-        "staff": 150,
-        "departments": ["Obstetrics", "Gynecology", "Neonatology"],
-        "modalities": ["Ultrasound", "Mammography", "MRI"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&h=350&fit=crop",
-        "institutionName": "Cleopatra Women",
-    },
-    {
-        "id": 11,
-        "name": "Port Said Trauma Center",
-        "location": "El-Anfoushy, Alexandria",
-        "type": "Trauma Center",
-        "beds": 230,
-        "staff": 200,
-        "departments": ["Trauma Surgery", "Emergency", "Burn Unit"],
-        "modalities": ["CT", "X-Ray", "Ultrasound"],
-        "status": "maintenance",
-        "image": "https://images.unsplash.com/photo-1504439468489-c8920d796a29?w=600&h=350&fit=crop",
-        "institutionName": "Port Said Trauma",
-    },
-    {
-        "id": 12,
-        "name": "Delta Respiratory Institute",
-        "location": "Agami, Alexandria",
-        "type": "Pulmonary Specialty",
-        "beds": 140,
-        "staff": 110,
-        "departments": ["Pulmonology", "Sleep Medicine", "Allergy"],
-        "modalities": ["CT", "X-Ray", "Nuclear"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=600&h=350&fit=crop",
-        "institutionName": "Delta Respiratory",
-    },
-    {
-        "id": 13,
-        "name": "Mediterranean Cancer Center",
-        "location": "Stanley, Alexandria",
-        "type": "Cancer Specialty",
-        "beds": 200,
-        "staff": 175,
-        "departments": ["Medical Oncology", "Radiation Oncology", "Surgical Oncology"],
-        "modalities": ["PET-CT", "MRI", "CT", "Nuclear"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1631815589968-fdb09a223b1e?w=600&h=350&fit=crop",
-        "institutionName": "Mediterranean Cancer",
-    },
-    {
-        "id": 14,
-        "name": "Alexandria Neurological Institute",
-        "location": "Rushdy, Alexandria",
-        "type": "Neurological Specialty",
-        "beds": 160,
-        "staff": 140,
-        "departments": ["Neurology", "Neurosurgery", "Neuroradiology"],
-        "modalities": ["MRI", "CT", "PET", "Angiography"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=600&h=350&fit=crop",
-        "institutionName": "Neuro Institute",
-    },
-    {
-        "id": 15,
-        "name": "Green Crescent Rehabilitation",
-        "location": "Montaza, Alexandria",
-        "type": "Rehabilitation Center",
-        "beds": 100,
-        "staff": 85,
-        "departments": ["Physical Therapy", "Occupational Therapy", "Speech Therapy"],
-        "modalities": ["X-Ray", "Ultrasound"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1512678080530-7760d81faba6?w=600&h=350&fit=crop",
-        "institutionName": "Green Crescent",
-    },
-    {
-        "id": 16,
-        "name": "Pharos Surgical Hospital",
-        "location": "Camp Caesar, Alexandria",
-        "type": "Surgical Specialty",
-        "beds": 220,
-        "staff": 190,
-        "departments": ["General Surgery", "Vascular Surgery", "Plastic Surgery"],
-        "modalities": ["CT", "X-Ray", "Ultrasound", "Fluoroscopy"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=600&h=350&fit=crop",
-        "institutionName": "Pharos Surgical",
-    },
-    {
-        "id": 17,
-        "name": "Royal Maternity Hospital",
-        "location": "San Stefano, Alexandria",
-        "type": "Maternity Hospital",
-        "beds": 130,
-        "staff": 110,
-        "departments": ["Labor & Delivery", "High-Risk Pregnancy", "NICU"],
-        "modalities": ["Ultrasound", "Fetal MRI", "Mammography"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1519483691394-c3fbe4dc2e8f?w=600&h=350&fit=crop",
-        "institutionName": "Royal Maternity",
-    },
-    {
-        "id": 18,
-        "name": "Alexandria Sports Medicine Clinic",
-        "location": "Sporting, Alexandria",
-        "type": "Sports Medicine",
-        "beds": 50,
-        "staff": 45,
-        "departments": ["Orthopedics", "Sports Rehabilitation", "Sports Nutrition"],
-        "modalities": ["MRI", "X-Ray", "Ultrasound"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=350&fit=crop",
-        "institutionName": "Sports Medicine",
-    },
-    {
-        "id": 19,
-        "name": "Corniche Cardiovascular Center",
-        "location": "Corniche, Alexandria",
-        "type": "Cardiovascular Specialty",
-        "beds": 170,
-        "staff": 155,
-        "departments": ["Cardiology", "Cardiac Surgery", "Vascular Surgery"],
-        "modalities": ["CT Angiography", "Cardiac MRI", "Echocardiography", "Nuclear"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd?w=600&h=350&fit=crop",
-        "institutionName": "Corniche Cardiovascular",
-    },
-    {
-        "id": 20,
-        "name": "Al-Madina Polyclinic",
-        "location": "Moharam Bey, Alexandria",
-        "type": "Polyclinic",
-        "beds": 70,
-        "staff": 60,
-        "departments": ["Family Medicine", "Internal Medicine", "Pediatrics"],
-        "modalities": ["X-Ray", "Ultrasound"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1504439468489-c8920d796a29?w=600&h=350&fit=crop",
-        "institutionName": "Al-Madina",
-    },
-    {
-        "id": 21,
-        "name": "Bibliotheca Medical Complex",
-        "location": "Shatby, Alexandria",
-        "type": "Medical Complex",
-        "beds": 320,
-        "staff": 280,
-        "departments": ["Multi-Specialty", "Emergency", "Diagnostics"],
-        "modalities": ["CT", "MRI", "X-Ray", "Ultrasound", "Mammography"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1587351021759-3e566b6af7cc?w=600&h=350&fit=crop",
-        "institutionName": "Bibliotheca Medical",
-    },
-    {
-        "id": 22,
-        "name": "Abu Qir Military Hospital",
-        "location": "Abu Qir, Alexandria",
-        "type": "Military Hospital",
-        "beds": 400,
-        "staff": 350,
-        "departments": ["All Specialties", "Military Medicine", "Trauma"],
-        "modalities": ["CT", "MRI", "X-Ray", "Ultrasound", "Nuclear"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1519494140681-03682a90037f?w=600&h=350&fit=crop",
-        "institutionName": "Abu Qir Military",
-    },
-    {
-        "id": 23,
-        "name": "Borg El Arab Diagnostic Center",
-        "location": "Borg El Arab, Alexandria",
-        "type": "Diagnostic Center",
-        "beds": 40,
-        "staff": 55,
-        "departments": ["Radiology", "Laboratory", "Cardiology"],
-        "modalities": ["CT", "MRI", "X-Ray", "Ultrasound"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=600&h=350&fit=crop",
-        "institutionName": "Borg El Arab Diagnostic",
-    },
-    {
-        "id": 24,
-        "name": "Victoria Hospital",
-        "location": "Victoria, Alexandria",
-        "type": "General Hospital",
-        "beds": 260,
-        "staff": 220,
-        "departments": ["Internal Medicine", "Surgery", "Pediatrics", "Emergency"],
-        "modalities": ["CT", "X-Ray", "Ultrasound"],
-        "status": "active",
-        "image": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=600&h=350&fit=crop",
-        "institutionName": "Victoria Hospital",
-    },
-]
+# Hospital data will be fetched dynamically from DICOM studies InstitutionName field
 
 
 async def get_token() -> str:
@@ -413,14 +98,49 @@ def clean_query_params(query_string: str) -> str:
 
 @app.get("/api/hospitals")
 async def list_hospitals():
-    """Return the full hospital registry (metadata only, no live DICOM stats)."""
-    return HOSPITAL_REGISTRY
+    """Return list of institutions from DICOM studies."""
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+
+        # Query for unique institution names from studies
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/aets/DCM4CHEE/rs/studies?limit=1000&includefield=00080080"
+        response = await client.get(url, headers=headers)
+
+        if response.status_code == 204:
+            return []
+        if response.status_code != 200:
+            return []
+
+        studies = response.json()
+        institutions = set()
+
+        for study in studies:
+            institution_name = study.get("00080080", {}).get("Value", [None])[0]
+            if institution_name:
+                institutions.add(institution_name)
+
+        # Convert to hospital-like objects
+        hospitals = []
+        for idx, name in enumerate(sorted(institutions), 1):
+            hospitals.append({
+                "id": idx,
+                "name": name,
+                "institutionName": name,
+                "status": "active"
+            })
+
+        return hospitals
+    except Exception as e:
+        print(f"Error fetching hospitals: {e}")
+        return []
 
 
 @app.get("/api/hospitals/{hospital_id}")
 async def get_hospital(hospital_id: int):
     """Return a single hospital record by id."""
-    for h in HOSPITAL_REGISTRY:
+    hospitals = await list_hospitals()
+    for h in hospitals:
         if h["id"] == hospital_id:
             return h
     raise HTTPException(status_code=404, detail="Hospital not found")
@@ -736,7 +456,8 @@ async def get_hospital_dashboard(hospital_id: str):
         institution_name = None
         try:
             hid = int(hospital_id)
-            for h in HOSPITAL_REGISTRY:
+            hospitals = await list_hospitals()
+            for h in hospitals:
                 if h["id"] == hid:
                     institution_name = h.get("institutionName")
                     break
@@ -958,6 +679,76 @@ async def get_hl7_application(hl7_app_name: str):
             raise HTTPException(status_code=response.status_code, detail=response.text)
 
         return response.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# EXPORT / ROUTING RULES
+# ============================================================================
+
+@app.get("/api/export-rules")
+async def list_export_rules():
+    """List all export/routing rules"""
+    try:
+        token = await get_token()
+
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/exporter-descriptors"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get(url, headers=headers)
+
+        if response.status_code != 200:
+            return []
+
+        return response.json()
+    except Exception as e:
+        print(f"Error fetching export rules: {e}")
+        return []
+
+
+@app.post("/api/export-rules")
+async def create_export_rule(request: Request):
+    """Create a new export/routing rule"""
+    try:
+        token = await get_token()
+        rule_data = await request.json()
+
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/exporter-descriptors"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        response = await client.post(url, json=rule_data, headers=headers)
+
+        if response.status_code not in (200, 201, 204):
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return {"success": True, "message": "Export rule created successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/export-rules/{exporter_id}")
+async def delete_export_rule(exporter_id: str):
+    """Delete an export/routing rule"""
+    try:
+        token = await get_token()
+
+        url = f"{DCM4CHEE_URL}/dcm4chee-arc/exporter-descriptors/{exporter_id}"
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.delete(url, headers=headers)
+
+        if response.status_code not in (200, 204):
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+
+        return {"success": True, "message": "Export rule deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:

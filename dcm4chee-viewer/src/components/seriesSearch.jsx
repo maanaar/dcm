@@ -17,7 +17,7 @@ export default function SeriesSearch() {
     fuzzyMatching: false,
     orderBy: 'SeriesDate',
     webAppService: 'dcm4chee-arc',
-    limit: '25',
+    limit: '10000',
   });
 
   const [searchResults, setSearchResults] = useState([]);
@@ -243,7 +243,6 @@ export default function SeriesSearch() {
                 value={formData.limit}
                 onChange={handleInputChange}
                 min="1"
-                max="1000"
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
               />
             </div>
@@ -275,7 +274,7 @@ export default function SeriesSearch() {
                 patientFamilyName: '', patientId: '', studyInstanceUID: '', seriesInstanceUID: '',
                 seriesNumber: '', seriesDescription: '', modality: '', bodyPartExamined: '',
                 performingPhysician: '', seriesDate: '', seriesTime: '', fuzzyMatching: false,
-                orderBy: 'SeriesDate', webAppService: 'dcm4chee-arc', limit: '25',
+                orderBy: 'SeriesDate', webAppService: 'dcm4chee-arc', limit: '10000',
               })}
               className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-2xl font-semibold transition"
             >

@@ -25,7 +25,7 @@ export default function StudiesBox() {
     studyAccess: '',
     orderBy: 'StudyDate',
     webAppService: 'dcm4chee-arc',
-    limit: '25',
+    limit: '10000',
   });
 
   const [searchResults, setSearchResults] = useState([]);

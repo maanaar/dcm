@@ -8,7 +8,7 @@ export default function PatientSearch() {
     patientFamilyName: '',
     patientId: '',
     issuerOfPatient: '',
-    limitOfPatients: '25',
+    limitOfPatients: '10000',
     orderBy: 'PatientName',
     patientSex: '',
     birthDate: '',
@@ -140,7 +140,6 @@ export default function PatientSearch() {
                 value={formData.limitOfPatients}
                 onChange={handleInputChange}
                 min="1"
-                max="100"
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317] text-gray-800"
               />
             </div>
