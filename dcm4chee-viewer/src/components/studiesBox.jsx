@@ -222,18 +222,14 @@ export default function StudiesBox() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
               >
-                {applicationEntities.length > 0 ? (
-                  applicationEntities.map((ae, idx) => {
-                    const aeTitle = typeof ae === 'string' ? ae : (ae.dicomAETitle || ae.aet);
-                    const aeDesc = typeof ae === 'object' ? (ae.dicomDescription || '') : '';
-                    return (
-                      <option key={idx} value={aeTitle}>
-                        {aeTitle}{aeDesc ? ` - ${aeDesc}` : ''}
-                      </option>
-                    );
-                  })
+                {webApps.length > 0 ? (
+                  webApps.map((app, idx) => (
+                    <option key={idx} value={app.webAppName || app.name}>
+                      {app.description || app.webAppName || app.name}
+                    </option>
+                  ))
                 ) : (
-                  <option value="DCM4CHEE">DCM4CHEE</option>
+                  <option value="dcm4chee-arc">DCM4CHEE Archive</option>
                 )}
               </select>
             </div>
