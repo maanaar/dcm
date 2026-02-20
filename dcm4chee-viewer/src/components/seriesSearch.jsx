@@ -32,15 +32,11 @@ export default function SeriesSearch() {
     try {
       const entities = await fetchApplicationEntities();
       setApplicationEntities(Array.isArray(entities) ? entities : []);
-      if (entities.length > 0) {
-        const firstAE = typeof entities[0] === 'string' ? entities[0] : (entities[0].dicomAETitle || entities[0].aet);
-        if (firstAE) {
-          setFormData(prev => ({ ...prev, webAppService: firstAE }));
-        }
-      }
+      // Default to "As Received" (no AE filter)
+      setFormData(prev => ({ ...prev, webAppService: 'AS_RECEIVED' }));
     } catch (err) {
       console.error('Error loading application entities:', err);
-      setApplicationEntities(['DCM4CHEE']);
+      setApplicationEntities([]);
     }
   };
 
@@ -54,12 +50,16 @@ export default function SeriesSearch() {
     setIsSearching(true);
     setError(null);
     try {
-      // Use the selected AE title for filtering, with "dcm4chee-arc" for backend routing
-      const searchData = {
-        ...formData,
-        sendingAET: formData.webAppService, // Use selected AE as filter
-        webAppService: 'dcm4chee-arc' // Backend archive
-      };
+      const searchData = { ...formData };
+
+      // Only apply AE filter if a specific AE is selected (not "As Received")
+      if (formData.webAppService && formData.webAppService !== 'AS_RECEIVED') {
+        searchData.sendingAET = formData.webAppService;
+      }
+
+      // Always use dcm4chee-arc for backend routing
+      searchData.webAppService = 'dcm4chee-arc';
+
       const results = await searchSeries(searchData);
       setSearchResults(results);
       if (results.length === 0) setError('No series found matching your criteria.');
@@ -254,19 +254,16 @@ export default function SeriesSearch() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
               >
-                {applicationEntities.length > 0 ? (
-                  applicationEntities.map((ae, idx) => {
-                    const aeTitle = typeof ae === 'string' ? ae : (ae.dicomAETitle || ae.aet);
-                    const aeDesc = typeof ae === 'object' ? (ae.dicomDescription || '') : '';
-                    return (
-                      <option key={idx} value={aeTitle}>
-                        {aeTitle}{aeDesc ? ` - ${aeDesc}` : ''}
-                      </option>
-                    );
-                  })
-                ) : (
-                  <option value="DCM4CHEE">DCM4CHEE</option>
-                )}
+                <option value="AS_RECEIVED">As Received (All)</option>
+                {applicationEntities.map((ae, idx) => {
+                  const aeTitle = typeof ae === 'string' ? ae : (ae.dicomAETitle || ae.aet);
+                  const aeDesc = typeof ae === 'object' ? (ae.dicomDescription || '') : '';
+                  return (
+                    <option key={idx} value={aeTitle}>
+                      {aeTitle}{aeDesc ? ` - ${aeDesc}` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
