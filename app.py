@@ -21,7 +21,7 @@ DCM4CHEE_URL = os.getenv("DCM4CHEE_URL", "http://172.16.16.221:8080")
 USERNAME     = os.getenv("DCM4CHEE_USERNAME", "root")
 PASSWORD     = os.getenv("DCM4CHEE_PASSWORD", "changeit")
 
-client = httpx.AsyncClient(verify=False)
+client = httpx.AsyncClient(verify=False, timeout=30.0)
 
 DEFAULT_WEBAPP = os.getenv("DEFAULT_WEBAPP", "DCM4CHEE")
 
@@ -228,16 +228,39 @@ async def search_patients(request: Request, webAppService: str = DEFAULT_WEBAPP)
         token = await get_token()
         query_params = clean_query_params(str(request.url.query))
         dcm_path = get_webapp_path(webAppService)
-        url = f"{DCM4CHEE_URL}{dcm_path}/patients"
-        if query_params:
-            url += f"?{query_params}"
         headers = {"Accept": "application/dicom+json", "Authorization": f"Bearer {token}"}
-        response = await client.get(url, headers=headers)
-        if response.status_code == 204:
-            return []
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=response.text)
-        return response.json()
+
+        # If caller already specified a limit, honour it (single request)
+        parsed = parse_qs(query_params)
+        if "limit" in parsed:
+            url = f"{DCM4CHEE_URL}{dcm_path}/patients"
+            if query_params:
+                url += f"?{query_params}"
+            response = await client.get(url, headers=headers)
+            if response.status_code == 204:
+                return []
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+            return response.json()
+
+        # No limit specified — paginate to retrieve all patients
+        base_params = f"?{query_params}&" if query_params else "?"
+        page_size = 1000
+        all_patients: list = []
+        offset = 0
+        while True:
+            url = f"{DCM4CHEE_URL}{dcm_path}/patients{base_params}limit={page_size}&offset={offset}"
+            response = await client.get(url, headers=headers)
+            if response.status_code == 204:
+                break
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+            page = response.json() or []
+            all_patients.extend(page)
+            if len(page) < page_size:
+                break
+            offset += page_size
+        return all_patients
     except HTTPException:
         raise
     except Exception as e:
@@ -388,41 +411,29 @@ async def _aggregate_stats(studies_raw: list, total_patients: int, hospital_id: 
     return result
 
 
+
 @app.get("/api/dashboard")
 async def get_dashboard_stats():
     """Network-wide aggregated dashboard statistics."""
     try:
-        token   = await get_token()
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+        token    = await get_token()
+        headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
         dcm_path = get_webapp_path(DEFAULT_WEBAPP)
 
-        studies_resp = await client.get(
-            f"{DCM4CHEE_URL}{dcm_path}/studies?limit=1000&orderby=-StudyDate",
+        # Fetch recent studies for modality breakdown, series/instance counts, recent-studies widget
+        recent_resp = await client.get(
+            f"{DCM4CHEE_URL}{dcm_path}/studies?limit=200&orderby=-StudyDate"
+            "&includefield=00080061,00100020,00080020,00081030,00080050,00201206,00201208",
             headers=headers,
         )
-        studies_raw: list = []
-        if studies_resp.status_code == 200:
-            studies_raw = studies_resp.json() or []
-        elif studies_resp.status_code not in (204, 404):
-            raise HTTPException(status_code=studies_resp.status_code, detail=studies_resp.text)
+        recent_raw: list = []
+        if recent_resp.status_code == 200:
+            recent_raw = recent_resp.json() or []
 
-        patients_resp = await client.get(
-            f"{DCM4CHEE_URL}{dcm_path}/patients?limit=1",
-            headers=headers,
-        )
-        total_patients = 0
-        if patients_resp.status_code == 200:
-            total_patients = int(
-                patients_resp.headers.get("X-Total-Count", 0)
-                or len(patients_resp.json() or [])
-            )
+        # Count unique patients in recent studies as a quick proxy
+        total_patients = len({_gv(s, "00100020") for s in recent_raw if _gv(s, "00100020")})
 
-        # Also enrich with institution breakdown
-        series_list = await _fetch_all_series(token, dcm_path)
-        institutions = _build_institutions_from_series(series_list)
-
-        stats = await _aggregate_stats(studies_raw, total_patients)
-        stats["institutionCount"] = len(institutions)
+        stats = await _aggregate_stats(recent_raw, total_patients)
         return stats
 
     except HTTPException:

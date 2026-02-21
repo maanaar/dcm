@@ -121,23 +121,15 @@ export default function DashboardPage() {
               />
               <StatCard
                 label="Total Patients"
-                value={
-                  statsLoading
-                    ? '—'
-                    : (apiStats?.totalPatients ?? totalPatientsFromHospitals).toLocaleString()
-                }
+                value={hospitalsLoading ? '—' : totalPatientsFromHospitals.toLocaleString()}
                 accent="#1E7586"
-                loading={statsLoading && hospitalsLoading}
+                loading={hospitalsLoading}
               />
               <StatCard
                 label="Total Studies"
-                value={
-                  statsLoading
-                    ? '—'
-                    : (apiStats?.totalStudies ?? totalStudiesFromHospitals).toLocaleString()
-                }
+                value={hospitalsLoading ? '—' : totalStudiesFromHospitals.toLocaleString()}
                 accent="#2F545B"
-                loading={statsLoading && hospitalsLoading}
+                loading={hospitalsLoading}
               />
             </div>
 
