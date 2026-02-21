@@ -71,21 +71,65 @@ def clean_query_params(query_string: str) -> str:
 
 @app.get("/api/hospitals")
 async def list_hospitals():
-    """Return institutions from dcm4chee as hospital list."""
+    """Return institutions from dcm4chee as hospital list.
+    Tries /institutions endpoint first; falls back to extracting InstitutionName
+    from study DICOM data (tag 00080080) if the primary endpoint returns nothing.
+    """
     try:
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+        # --- Primary: dcm4chee institutions endpoint ---
         response = await client.get(
             f"{DCM4CHEE_URL}/dcm4chee-arc/institutions",
             headers=headers,
         )
         if response.status_code == 200:
-            names = response.json()  # list of strings
-            return [
-                {"id": idx + 1, "name": name, "institutionName": name, "status": "active"}
-                for idx, name in enumerate(names)
-                if name
-            ]
+            names = [n for n in (response.json() or []) if n]
+            if names:
+                return [
+                    {"id": idx + 1, "name": name, "institutionName": name, "status": "active"}
+                    for idx, name in enumerate(names)
+                ]
+
+        # --- Fallback 1: extract InstitutionName from studies DICOM data ---
+        dcm_path = get_webapp_path(DEFAULT_WEBAPP)
+        studies_resp = await client.get(
+            f"{DCM4CHEE_URL}{dcm_path}/studies?limit=1000",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"},
+        )
+        if studies_resp.status_code == 200:
+            seen = {}
+            for study in (studies_resp.json() or []):
+                raw_val = study.get("00080080", {}).get("Value", [])
+                inst = (raw_val[0] if raw_val else "")
+                if isinstance(inst, str):
+                    inst = inst.strip()
+                else:
+                    inst = ""
+                if inst and inst not in seen:
+                    seen[inst] = True
+            names = list(seen.keys())
+            if names:
+                return [
+                    {"id": idx + 1, "name": name, "institutionName": name, "status": "active"}
+                    for idx, name in enumerate(names)
+                ]
+
+        # --- Fallback 2: use QIDO-RS web app names as sites ---
+        webapps_resp = await client.get(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/webapps?dcmWebServiceClass=QIDO_RS",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if webapps_resp.status_code == 200:
+            apps = webapps_resp.json() or []
+            names = [a.get("dcmWebAppName", "") for a in apps if a.get("dcmWebAppName")]
+            if names:
+                return [
+                    {"id": idx + 1, "name": name, "institutionName": name, "status": "active"}
+                    for idx, name in enumerate(names)
+                ]
+
         return []
     except Exception as e:
         print(f"Error fetching institutions: {e}")
@@ -455,6 +499,92 @@ async def get_device(device_name: str):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# ROUTING RULES  (dcmForwardRule extracted from device config)
+# ============================================================================
+
+async def _get_device_config(token: str, device_name: str) -> dict:
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{device_name}", headers=headers)
+    return resp.json() if resp.status_code == 200 else {}
+
+
+@app.get("/api/routing-rules")
+async def list_routing_rules():
+    """Extract Forward Rules from all device configurations."""
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+        if devices_resp.status_code != 200:
+            return []
+
+        device_names = [
+            d["dicomDeviceName"] if isinstance(d, dict) else d
+            for d in (devices_resp.json() or [])
+        ]
+
+        rules = []
+        for name in device_names:
+            config = await _get_device_config(token, name)
+            for ae in config.get("dicomNetworkAE", []):
+                local_ae = ae.get("dicomAETitle", "")
+                for rule in ae.get("dcmNetworkAE", {}).get("dcmForwardRule", []):
+                    rules.append({
+                        "cn":             rule.get("cn", ""),
+                        "description":    rule.get("dicomDescription", ""),
+                        "sourceAETitle":  rule.get("dcmForwardRuleSCUAETitle", []),
+                        "localAETitle":   local_ae,
+                        "destAETitle":    rule.get("dcmDestinationAETitle", []),
+                        "bind":           rule.get("dcmProperty", []),
+                        "priority":       rule.get("dcmRulePriority", 0),
+                        "status":         "active",
+                    })
+        return rules
+    except Exception as e:
+        print(f"Error fetching routing rules: {e}")
+        return []
+
+
+@app.get("/api/transform-rules")
+async def list_transform_rules():
+    """Extract Coercion Rules from all device configurations."""
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+        if devices_resp.status_code != 200:
+            return []
+
+        device_names = [
+            d["dicomDeviceName"] if isinstance(d, dict) else d
+            for d in (devices_resp.json() or [])
+        ]
+
+        rules = []
+        for name in device_names:
+            config = await _get_device_config(token, name)
+            for ae in config.get("dicomNetworkAE", []):
+                local_ae = ae.get("dicomAETitle", "")
+                for rule in ae.get("dcmNetworkAE", {}).get("dcmCoercionRule", []):
+                    rules.append({
+                        "cn":          rule.get("cn", ""),
+                        "description": rule.get("dicomDescription", ""),
+                        "localAETitle": local_ae,
+                        "sourceAE":    rule.get("dcmCoercionAETitlePattern", ""),
+                        "target":      rule.get("dcmURI", ""),
+                        "gateway":     rule.get("dcmCoercionSuffix", ""),
+                        "priority":    rule.get("dcmRulePriority", 0),
+                        "status":      "active",
+                    })
+        return rules
+    except Exception as e:
+        print(f"Error fetching transform rules: {e}")
+        return []
 
 
 # ============================================================================

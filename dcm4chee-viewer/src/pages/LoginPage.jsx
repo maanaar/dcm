@@ -130,7 +130,7 @@ export default function LoginPage() {
         await new Promise(resolve => setTimeout(resolve, 500));
 
         // Login successful - redirect to patients page
-        navigate('/patients');
+        navigate('/dashboard');
       }
     } catch (err) {
       console.error('Login error:', err);

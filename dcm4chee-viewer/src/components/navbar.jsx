@@ -26,7 +26,8 @@ const navItems = [
       { name: "Devices", path: "/devices" },
       { name: "AE List", path: "/ae-list" },
       { name: "HL7 Application", path: "/hl7-application" },
-      { name: "Routing Roles", path: "/routing-roles" },
+      { name: "Routing Rules", path: "/routing-roles" },
+      { name: "Transform Rules", path: "/transform-rules" },
     ]
   },
 ];

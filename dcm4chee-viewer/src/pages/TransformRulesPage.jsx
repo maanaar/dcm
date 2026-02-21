@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { fetchRoutingRules } from '../services/dcmchee';
+import { fetchTransformRules } from '../services/dcmchee';
 
-export default function RoutingRolesPage() {
+export default function TransformRulesPage() {
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,28 +15,23 @@ export default function RoutingRolesPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchRoutingRules();
+      const data = await fetchTransformRules();
       setRules(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Error loading routing rules:', err);
-      setError(`Failed to load routing rules: ${err.message}`);
+      console.error('Error loading transform rules:', err);
+      setError(`Failed to load transform rules: ${err.message}`);
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatList = (val) => {
-    if (Array.isArray(val)) return val.length ? val.join(', ') : '—';
-    return val || '—';
   };
 
   const filteredRules = rules.filter(rule => {
     const s = searchTerm.toLowerCase();
     return (
       (rule.cn || '').toLowerCase().includes(s) ||
-      formatList(rule.sourceAETitle).toLowerCase().includes(s) ||
+      (rule.description || '').toLowerCase().includes(s) ||
       (rule.localAETitle || '').toLowerCase().includes(s) ||
-      formatList(rule.destAETitle).toLowerCase().includes(s)
+      (rule.sourceAE || '').toLowerCase().includes(s)
     );
   });
 
@@ -47,7 +42,7 @@ export default function RoutingRolesPage() {
         {/* Header */}
         <div className="flex gap-2 px-4 sm:px-6 py-3 border-b">
           <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block shrink-0" />
-          <h2 className="text-xl sm:text-2xl mt-2 font-semibold text-gray-800">Routing Rules</h2>
+          <h2 className="text-xl sm:text-2xl mt-2 font-semibold text-gray-800">Transform Rules</h2>
         </div>
 
         {/* Search & Actions Bar */}
@@ -55,7 +50,7 @@ export default function RoutingRolesPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
-              placeholder="Search routing rules..."
+              placeholder="Search transform rules..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1 px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 bg-[#00768317] text-gray-800"
@@ -66,11 +61,6 @@ export default function RoutingRolesPage() {
               className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-2xl font-semibold transition disabled:opacity-50 whitespace-nowrap"
             >
               {loading ? 'Loading...' : 'Refresh'}
-            </button>
-            <button
-              className="px-6 py-2 bg-[#0a6e79] hover:bg-[#1E7586] text-white rounded-2xl font-semibold transition whitespace-nowrap"
-            >
-              Add Rule
             </button>
           </div>
         </div>
@@ -86,13 +76,13 @@ export default function RoutingRolesPage() {
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0a6e79]"></div>
-              <p className="mt-4 text-gray-600">Loading Routing Rules...</p>
+              <p className="mt-4 text-gray-600">Loading Transform Rules...</p>
             </div>
           ) : filteredRules.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-5xl mb-3">🔀</div>
+              <div className="text-5xl mb-3">⚙️</div>
               <p className="text-gray-600 text-lg">
-                {searchTerm ? 'No rules found matching your search.' : 'No Routing Rules configured.'}
+                {searchTerm ? 'No rules found matching your search.' : 'No Transform Rules configured.'}
               </p>
             </div>
           ) : (
@@ -107,11 +97,12 @@ export default function RoutingRolesPage() {
                   <thead>
                     <tr className="bg-[#0a6e79] text-white text-left">
                       <th className="px-4 py-3 font-semibold">#</th>
-                      <th className="px-4 py-3 font-semibold">Source AEs</th>
-                      <th className="px-4 py-3 font-semibold">Local AE</th>
-                      <th className="px-4 py-3 font-semibold">Destination AEs</th>
-                      <th className="px-4 py-3 font-semibold">Bind</th>
-                      <th className="px-4 py-3 font-semibold">Priority</th>
+                      <th className="px-4 py-3 font-semibold">Name</th>
+                      <th className="px-4 py-3 font-semibold">Description</th>
+                      <th className="px-4 py-3 font-semibold">AE Local</th>
+                      <th className="px-4 py-3 font-semibold">Source</th>
+                      <th className="px-4 py-3 font-semibold">Target</th>
+                      <th className="px-4 py-3 font-semibold">Gateway</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
                     </tr>
                   </thead>
@@ -122,31 +113,20 @@ export default function RoutingRolesPage() {
                         className={`border-t border-gray-100 hover:bg-[#00768308] transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                       >
                         <td className="px-4 py-3 text-gray-400">{idx + 1}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {Array.isArray(rule.sourceAETitle) && rule.sourceAETitle.length > 0
-                              ? rule.sourceAETitle.map((ae, i) => (
-                                  <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{ae}</span>
-                                ))
-                              : <span className="text-gray-400">—</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-[#0a6e79]">{rule.localAETitle || '—'}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {Array.isArray(rule.destAETitle) && rule.destAETitle.length > 0
-                              ? rule.destAETitle.map((ae, i) => (
-                                  <span key={i} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">{ae}</span>
-                                ))
-                              : <span className="text-gray-400">—</span>}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">
-                          {Array.isArray(rule.bind) && rule.bind.length > 0
-                            ? rule.bind.join(', ')
+                        <td className="px-4 py-3 font-semibold text-[#0a6e79]">{rule.cn || '—'}</td>
+                        <td className="px-4 py-3 text-gray-600">{rule.description || '—'}</td>
+                        <td className="px-4 py-3 text-gray-600">{rule.localAETitle || '—'}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {rule.sourceAE
+                            ? <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{rule.sourceAE}</span>
                             : '—'}
                         </td>
-                        <td className="px-4 py-3 text-gray-600">{rule.priority ?? '—'}</td>
+                        <td className="px-4 py-3 text-gray-600 text-xs">
+                          {rule.target
+                            ? <code className="bg-gray-100 px-2 py-0.5 rounded">{rule.target}</code>
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{rule.gateway || '—'}</td>
                         <td className="px-4 py-3">
                           <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Active</span>
                         </td>
@@ -161,44 +141,36 @@ export default function RoutingRolesPage() {
                 {filteredRules.map((rule, idx) => (
                   <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                     <div className="flex justify-between items-center mb-3">
-                      <span className="font-semibold text-[#0a6e79] text-sm">Rule #{idx + 1}</span>
+                      <span className="font-semibold text-[#0a6e79] text-sm">{rule.cn || `Rule #${idx + 1}`}</span>
                       <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Active</span>
                     </div>
                     <div className="space-y-2 text-sm">
-                      <div>
-                        <span className="text-gray-500 text-xs uppercase font-medium">Source AEs</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {Array.isArray(rule.sourceAETitle) && rule.sourceAETitle.length > 0
-                            ? rule.sourceAETitle.map((ae, i) => (
-                                <span key={i} className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">{ae}</span>
-                              ))
-                            : <span className="text-gray-400">—</span>}
+                      {rule.description && (
+                        <div>
+                          <span className="text-gray-500 text-xs uppercase font-medium">Description</span>
+                          <p className="text-gray-700">{rule.description}</p>
                         </div>
-                      </div>
+                      )}
                       <div className="flex gap-4">
                         <div className="flex-1">
-                          <span className="text-gray-500 text-xs uppercase font-medium">Local AE</span>
-                          <p className="font-semibold text-[#0a6e79]">{rule.localAETitle || '—'}</p>
+                          <span className="text-gray-500 text-xs uppercase font-medium">AE Local</span>
+                          <p className="text-gray-700">{rule.localAETitle || '—'}</p>
                         </div>
                         <div className="flex-1">
-                          <span className="text-gray-500 text-xs uppercase font-medium">Priority</span>
-                          <p className="text-gray-700">{rule.priority ?? '—'}</p>
+                          <span className="text-gray-500 text-xs uppercase font-medium">Source</span>
+                          <p className="text-gray-700">{rule.sourceAE || '—'}</p>
                         </div>
                       </div>
-                      <div>
-                        <span className="text-gray-500 text-xs uppercase font-medium">Destination AEs</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {Array.isArray(rule.destAETitle) && rule.destAETitle.length > 0
-                            ? rule.destAETitle.map((ae, i) => (
-                                <span key={i} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs">{ae}</span>
-                              ))
-                            : <span className="text-gray-400">—</span>}
-                        </div>
-                      </div>
-                      {Array.isArray(rule.bind) && rule.bind.length > 0 && (
+                      {rule.target && (
                         <div>
-                          <span className="text-gray-500 text-xs uppercase font-medium">Bind</span>
-                          <p className="text-gray-600 text-xs">{rule.bind.join(', ')}</p>
+                          <span className="text-gray-500 text-xs uppercase font-medium">Target</span>
+                          <p className="text-gray-600 text-xs font-mono bg-gray-100 px-2 py-1 rounded mt-1">{rule.target}</p>
+                        </div>
+                      )}
+                      {rule.gateway && (
+                        <div>
+                          <span className="text-gray-500 text-xs uppercase font-medium">Gateway</span>
+                          <p className="text-gray-700">{rule.gateway}</p>
                         </div>
                       )}
                     </div>

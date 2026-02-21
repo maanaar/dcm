@@ -496,6 +496,42 @@ export const fetchHL7Application = async (hl7AppName) => {
 };
 
 // ============================================================================
+// ROUTING RULES API
+// ============================================================================
+
+export const fetchRoutingRules = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/routing-rules`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch routing rules: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching routing rules:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// TRANSFORM RULES API
+// ============================================================================
+
+export const fetchTransformRules = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/transform-rules`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch transform rules: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching transform rules:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
 // EXPORT / ROUTING RULES API
 // ============================================================================
 
