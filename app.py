@@ -63,14 +63,11 @@ def _fmt_date(raw: str) -> str:
 
 async def _fetch_all_series(token: str, dcm_path: str) -> list:
     """
-    Fetch series with the fields needed to build institution cards.
-    InstitutionName (00080080) is a series-level DICOM attribute, so this is
-    the most accurate source.
+    Paginate through ALL series to collect InstitutionName data.
+    Uses offset/limit to avoid the server-side cap.
     """
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
-    resp = await client.get(
-        f"{DCM4CHEE_URL}{dcm_path}/series"
-        "?limit=5000"
+    fields = (
         "&includefield=00080080"   # InstitutionName
         ",00080081"                # InstitutionAddress
         ",00081040"                # InstitutionalDepartmentName
@@ -78,60 +75,98 @@ async def _fetch_all_series(token: str, dcm_path: str) -> list:
         ",0020000D"                # StudyInstanceUID
         ",00100020"                # PatientID
         ",00080021"                # SeriesDate
-        ",00080031",               # SeriesTime
-        headers=headers,
+        ",00080031"                # SeriesTime
     )
-    if resp.status_code == 200:
-        return resp.json() or []
-    return []
+    all_series = []
+    limit = 1000
+    offset = 0
+    while True:
+        resp = await client.get(
+            f"{DCM4CHEE_URL}{dcm_path}/series?limit={limit}&offset={offset}{fields}",
+            headers=headers,
+        )
+        if resp.status_code in (204, 404):
+            break
+        if resp.status_code != 200:
+            break
+        page = resp.json() or []
+        all_series.extend(page)
+        if len(page) < limit:
+            break
+        offset += limit
+    return all_series
 
 
-def _build_institutions_from_series(series_list: list) -> List[dict]:
+async def _fetch_all_studies_sup(token: str, dcm_path: str) -> list:
     """
-    Group series by InstitutionName.
-    - studyCount  = distinct StudyInstanceUIDs
-    - patientCount = distinct PatientIDs
-    - modalities   = distinct Modality values
-    - departments  = distinct InstitutionalDepartmentName values
-    - lastStudyDate = most recent SeriesDate
-    Sorted by studyCount descending.
+    Paginate through ALL studies to supplement series-based institution data.
+    Only fetches the tags needed for institution grouping.
+    """
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+    fields = "&includefield=00080080,00080081,00081040,00080061,0020000D,00100020,00080020"
+    all_studies = []
+    limit = 1000
+    offset = 0
+    while True:
+        resp = await client.get(
+            f"{DCM4CHEE_URL}{dcm_path}/studies?limit={limit}&offset={offset}{fields}",
+            headers=headers,
+        )
+        if resp.status_code in (204, 404):
+            break
+        if resp.status_code != 200:
+            break
+        page = resp.json() or []
+        all_studies.extend(page)
+        if len(page) < limit:
+            break
+        offset += limit
+    return all_studies
+
+
+def _build_institutions_from_series(series_list: list, studies_list: list = None) -> List[dict]:
+    """
+    Group by InstitutionName using series as primary source, studies as supplemental.
+    Studies fill in institutions whose series lack the tag or weren't returned due to limit.
     """
     buckets: Dict[str, dict] = {}
 
-    for s in series_list:
-        inst_name = _gv(s, "00080080") or "Unknown"
-
+    def _ensure_bucket(inst_name: str, address: str) -> dict:
         if inst_name not in buckets:
             buckets[inst_name] = {
-                "address":     _gv(s, "00080081") or "",
+                "address":     address,
                 "study_uids":  set(),
                 "patient_ids": set(),
                 "modalities":  set(),
                 "departments": set(),
                 "dates":       [],
             }
+        return buckets[inst_name]
 
-        b = buckets[inst_name]
+    # Primary: series-level InstitutionName (most accurate)
+    for s in series_list:
+        inst_name = (_gv(s, "00080080") or "").strip()
+        if not inst_name:
+            continue
+        b = _ensure_bucket(inst_name, _gv(s, "00080081") or "")
+        uid = _gv(s, "0020000D");  uid and b["study_uids"].add(uid)
+        pid = _gv(s, "00100020");  pid and b["patient_ids"].add(pid)
+        mod = _gv(s, "00080060");  mod and b["modalities"].add(mod)
+        dept = _gv(s, "00081040"); dept and b["departments"].add(dept)
+        d = _gv(s, "00080021");    d and b["dates"].append(d)
 
-        uid = _gv(s, "0020000D")
-        if uid:
-            b["study_uids"].add(uid)
-
-        pid = _gv(s, "00100020")
-        if pid:
-            b["patient_ids"].add(pid)
-
-        mod = _gv(s, "00080060")
-        if mod:
-            b["modalities"].add(mod)
-
-        dept = _gv(s, "00081040")
-        if dept:
-            b["departments"].add(dept)
-
-        d = _gv(s, "00080021")
-        if d:
-            b["dates"].append(d)
+    # Supplemental: study-level InstitutionName (catches devices that set it at study level only)
+    for study in (studies_list or []):
+        inst_name = (_gv(study, "00080080") or "").strip()
+        if not inst_name:
+            continue
+        b = _ensure_bucket(inst_name, _gv(study, "00080081") or "")
+        uid = _gv(study, "0020000D");  uid and b["study_uids"].add(uid)
+        pid = _gv(study, "00100020");  pid and b["patient_ids"].add(pid)
+        for mod in (study.get("00080061", {}).get("Value", []) or []):
+            mod and b["modalities"].add(mod)
+        dept = _gv(study, "00081040"); dept and b["departments"].add(dept)
+        d = _gv(study, "00080020");    d and b["dates"].append(d)
 
     result = []
     for i, (name, b) in enumerate(
@@ -155,13 +190,19 @@ def _build_institutions_from_series(series_list: list) -> List[dict]:
 
 @app.get("/api/hospitals")
 async def list_hospitals():
-    """Return institutions built by grouping series by InstitutionName."""
+    """Return institutions built by grouping series (primary) + studies (supplemental) by InstitutionName."""
     try:
         token    = await get_token()
         dcm_path = get_webapp_path(DEFAULT_WEBAPP)
-        series_list  = await _fetch_all_series(token, dcm_path)
-        institutions = _build_institutions_from_series(series_list)
-        print(f"[hospitals] {len(institutions)} institutions from {len(series_list)} series")
+
+        # Primary: series-level InstitutionName (paginated)
+        series_list = await _fetch_all_series(token, dcm_path)
+
+        # Supplemental: study-level InstitutionName (paginated)
+        studies_sup = await _fetch_all_studies_sup(token, dcm_path)
+
+        institutions = _build_institutions_from_series(series_list, studies_sup)
+        print(f"[hospitals] {len(institutions)} institutions from {len(series_list)} series + {len(studies_sup)} studies")
         return institutions
     except Exception as e:
         print(f"[hospitals] Error: {e}")
