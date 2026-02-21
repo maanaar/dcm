@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react';
-import { fetchRoutingRules, createRoutingRule } from '../services/dcmchee';
+import { fetchRoutingRules, createRoutingRule, fetchApplicationEntities, fetchDevices } from '../services/dcmchee';
 
 const BLANK = {
-  cn: '', description: '', sourceAETitle: '', localAETitle: '', destAETitle: '', bind: '', priority: '',
+  cn: '', description: '', deviceName: '', localAETitle: '', sourceAETitle: '', destAETitle: '', queueName: '', bind: '', priority: '',
 };
 
 const inp =
   'w-full px-2 py-1 border border-gray-300 rounded-lg text-xs outline-none ' +
   'focus:ring-1 focus:ring-[#0a6e79] focus:border-[#0a6e79] bg-white placeholder-gray-400';
 
+const sel =
+  'w-full px-2 py-1 border border-gray-300 rounded-lg text-xs outline-none ' +
+  'focus:ring-1 focus:ring-[#0a6e79] focus:border-[#0a6e79] bg-white text-gray-700';
+
 export default function RoutingRolesPage() {
   const [rules,      setRules]      = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [aeTitles,   setAeTitles]   = useState([]);
+  const [deviceNames, setDeviceNames] = useState([]);
 
   // inline-add state
   const [adding,    setAdding]    = useState(false);
@@ -21,7 +27,25 @@ export default function RoutingRolesPage() {
   const [saving,    setSaving]    = useState(false);
   const [saveError, setSaveError] = useState(null);
 
-  useEffect(() => { loadRules(); }, []);
+  useEffect(() => {
+    loadRules();
+    fetchApplicationEntities()
+      .then(data => {
+        const titles = (Array.isArray(data) ? data : []).map(ae =>
+          typeof ae === 'string' ? ae : (ae.dicomAETitle || ae.aet || '')
+        ).filter(Boolean);
+        setAeTitles(titles);
+      })
+      .catch(() => {});
+    fetchDevices()
+      .then(data => {
+        const names = (Array.isArray(data) ? data : []).map(d =>
+          typeof d === 'string' ? d : (d.dicomDeviceName || '')
+        ).filter(Boolean);
+        setDeviceNames(names);
+      })
+      .catch(() => {});
+  }, []);
 
   const loadRules = async () => {
     setLoading(true); setError(null);
@@ -42,13 +66,14 @@ export default function RoutingRolesPage() {
     setSaving(true); setSaveError(null);
     try {
       await createRoutingRule(newRule);
-      // optimistic: append to list immediately
       setRules(prev => [...prev, {
         cn:            newRule.cn || `forward-rule-${prev.length + 1}`,
         description:   newRule.description,
-        sourceAETitle: newRule.sourceAETitle ? newRule.sourceAETitle.split(',').map(s => s.trim()).filter(Boolean) : [],
+        deviceName:    newRule.deviceName,
         localAETitle:  newRule.localAETitle,
+        sourceAETitle: newRule.sourceAETitle ? newRule.sourceAETitle.split(',').map(s => s.trim()).filter(Boolean) : [],
         destAETitle:   newRule.destAETitle   ? newRule.destAETitle.split(',').map(s => s.trim()).filter(Boolean)   : [],
+        queueName:     newRule.queueName,
         bind:          newRule.bind          ? newRule.bind.split(',').map(s => s.trim()).filter(Boolean)           : [],
         priority:      newRule.priority ? Number(newRule.priority) : 0,
         status:        'active',
@@ -75,6 +100,13 @@ export default function RoutingRolesPage() {
   });
 
   const showTable = !loading && (filtered.length > 0 || adding);
+
+  // Shared datalist for AE autocomplete
+  const AEDatalist = () => (
+    <datalist id="ae-options">
+      {aeTitles.map(ae => <option key={ae} value={ae} />)}
+    </datalist>
+  );
 
   return (
     <div className="relative min-h-[calc(100vh-3.5rem)] p-3 sm:p-6">
@@ -139,6 +171,7 @@ export default function RoutingRolesPage() {
             </div>
           ) : (
             <>
+              <AEDatalist />
               <div className="mb-3 text-sm text-gray-500">
                 {filtered.length} rule{filtered.length !== 1 ? 's' : ''}
                 {adding && <span className="ml-2 text-[#0a6e79] font-medium">• Adding new rule…</span>}
@@ -151,10 +184,11 @@ export default function RoutingRolesPage() {
                     <tr className="bg-[#0a6e79] text-white text-left">
                       <th className="px-4 py-3 font-semibold w-8">#</th>
                       <th className="px-4 py-3 font-semibold">Name</th>
-                      <th className="px-4 py-3 font-semibold">Description</th>
-                      <th className="px-4 py-3 font-semibold">Source AEs</th>
+                      <th className="px-4 py-3 font-semibold">Device</th>
                       <th className="px-4 py-3 font-semibold">Local AE</th>
+                      <th className="px-4 py-3 font-semibold">Source AEs</th>
                       <th className="px-4 py-3 font-semibold">Destination AEs</th>
+                      <th className="px-4 py-3 font-semibold">Queue</th>
                       <th className="px-4 py-3 font-semibold">Property Filter</th>
                       <th className="px-4 py-3 font-semibold w-16">Priority</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
@@ -168,7 +202,8 @@ export default function RoutingRolesPage() {
                       >
                         <td className="px-4 py-3 text-gray-400">{idx + 1}</td>
                         <td className="px-4 py-3 font-semibold text-[#0a6e79]">{rule.cn || '—'}</td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">{rule.description || '—'}</td>
+                        <td className="px-4 py-3 text-xs text-gray-600 font-medium">{rule.deviceName || '—'}</td>
+                        <td className="px-4 py-3 font-semibold text-[#0a6e79]">{rule.localAETitle || '—'}</td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             {Array.isArray(rule.sourceAETitle) && rule.sourceAETitle.length
@@ -178,7 +213,6 @@ export default function RoutingRolesPage() {
                               : <span className="text-gray-400">—</span>}
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-semibold text-[#0a6e79]">{rule.localAETitle || '—'}</td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             {Array.isArray(rule.destAETitle) && rule.destAETitle.length
@@ -188,6 +222,7 @@ export default function RoutingRolesPage() {
                               : <span className="text-gray-400">—</span>}
                           </div>
                         </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">{rule.queueName || '—'}</td>
                         <td className="px-4 py-3 text-gray-600 text-xs">
                           {Array.isArray(rule.bind) && rule.bind.length ? rule.bind.join(', ') : '—'}
                         </td>
@@ -211,19 +246,33 @@ export default function RoutingRolesPage() {
                             onChange={e => setNewRule(p => ({ ...p, description: e.target.value }))} />
                         </td>
                         <td className="px-3 py-2">
-                          <input className={inp} placeholder="AE1, AE2" value={newRule.sourceAETitle}
+                          <select className={sel} value={newRule.deviceName}
+                            onChange={e => setNewRule(p => ({ ...p, deviceName: e.target.value }))}>
+                            <option value="">— Device —</option>
+                            {deviceNames.map(d => <option key={d} value={d}>{d}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          <select className={sel} value={newRule.localAETitle}
+                            onChange={e => setNewRule(p => ({ ...p, localAETitle: e.target.value }))}>
+                            <option value="">— AE —</option>
+                            {aeTitles.map(ae => <option key={ae} value={ae}>{ae}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-3 py-2">
+                          <input className={inp} list="ae-options" placeholder="Select or type AE" value={newRule.sourceAETitle}
                             onChange={e => setNewRule(p => ({ ...p, sourceAETitle: e.target.value }))} />
                         </td>
                         <td className="px-3 py-2">
-                          <input className={inp} placeholder="Local AE" value={newRule.localAETitle}
-                            onChange={e => setNewRule(p => ({ ...p, localAETitle: e.target.value }))} />
-                        </td>
-                        <td className="px-3 py-2">
-                          <input className={inp} placeholder="DEST1, DEST2" value={newRule.destAETitle}
+                          <input className={inp} list="ae-options" placeholder="Select or type AE" value={newRule.destAETitle}
                             onChange={e => setNewRule(p => ({ ...p, destAETitle: e.target.value }))} />
                         </td>
                         <td className="px-3 py-2">
-                          <input className={inp} placeholder="prop=val" value={newRule.bind}
+                          <input className={inp} placeholder="Queue name" value={newRule.queueName}
+                            onChange={e => setNewRule(p => ({ ...p, queueName: e.target.value }))} />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input className={inp} placeholder="Modality=CT" value={newRule.bind}
                             onChange={e => setNewRule(p => ({ ...p, bind: e.target.value }))} />
                         </td>
                         <td className="px-3 py-2">
@@ -304,17 +353,14 @@ export default function RoutingRolesPage() {
                 {/* Mobile inline add form */}
                 {adding && (
                   <div className="bg-teal-50 border-2 border-[#0a6e79] rounded-xl p-4 shadow-sm space-y-2">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-semibold text-[#0a6e79] text-sm">New Routing Rule</span>
-                    </div>
+                    <span className="font-semibold text-[#0a6e79] text-sm block mb-1">New Routing Rule</span>
+
                     {[
-                      { label: 'Name (cn)',        key: 'cn',            ph: 'forward-rule-1' },
-                      { label: 'Description',      key: 'description',   ph: 'Description' },
-                      { label: 'Source AEs',       key: 'sourceAETitle', ph: 'AE1, AE2' },
-                      { label: 'Local AE',         key: 'localAETitle',  ph: 'DCM4CHEE' },
-                      { label: 'Destination AEs',  key: 'destAETitle',   ph: 'DEST1, DEST2' },
-                      { label: 'Property Filter',  key: 'bind',          ph: 'Modality=CT' },
-                      { label: 'Priority',         key: 'priority',      ph: '0', type: 'number' },
+                      { label: 'Name (cn)',       key: 'cn',           ph: 'forward-rule-1' },
+                      { label: 'Description',     key: 'description',  ph: 'Description' },
+                      { label: 'Queue Name',      key: 'queueName',    ph: 'FORWARD' },
+                      { label: 'Property Filter', key: 'bind',         ph: 'Modality=CT' },
+                      { label: 'Priority',        key: 'priority',     ph: '0', type: 'number' },
                     ].map(({ label, key, ph, type }) => (
                       <div key={key}>
                         <label className="text-xs text-gray-500 uppercase font-medium">{label}</label>
@@ -327,18 +373,47 @@ export default function RoutingRolesPage() {
                         />
                       </div>
                     ))}
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Device</label>
+                      <select className={`${sel} mt-0.5`} value={newRule.deviceName}
+                        onChange={e => setNewRule(p => ({ ...p, deviceName: e.target.value }))}>
+                        <option value="">— Select Device —</option>
+                        {deviceNames.map(d => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Local AE</label>
+                      <select className={`${sel} mt-0.5`} value={newRule.localAETitle}
+                        onChange={e => setNewRule(p => ({ ...p, localAETitle: e.target.value }))}>
+                        <option value="">— Select AE —</option>
+                        {aeTitles.map(ae => <option key={ae} value={ae}>{ae}</option>)}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Source AEs</label>
+                      <input list="ae-options" className={`${inp} mt-0.5`} placeholder="Select or type AE"
+                        value={newRule.sourceAETitle}
+                        onChange={e => setNewRule(p => ({ ...p, sourceAETitle: e.target.value }))} />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-medium">Destination AEs</label>
+                      <input list="ae-options" className={`${inp} mt-0.5`} placeholder="Select or type AE"
+                        value={newRule.destAETitle}
+                        onChange={e => setNewRule(p => ({ ...p, destAETitle: e.target.value }))} />
+                    </div>
+
                     {saveError && <p className="text-red-600 text-xs">{saveError}</p>}
                     <div className="flex gap-2 pt-1">
-                      <button
-                        onClick={handleSave} disabled={saving}
-                        className="flex-1 py-2 bg-[#0a6e79] hover:bg-[#1E7586] text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
-                      >
+                      <button onClick={handleSave} disabled={saving}
+                        className="flex-1 py-2 bg-[#0a6e79] hover:bg-[#1E7586] text-white rounded-xl text-sm font-semibold transition disabled:opacity-50">
                         {saving ? 'Saving…' : 'Save Rule'}
                       </button>
-                      <button
-                        onClick={handleCancel} disabled={saving}
-                        className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-sm font-semibold transition"
-                      >
+                      <button onClick={handleCancel} disabled={saving}
+                        className="flex-1 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-sm font-semibold transition">
                         Cancel
                       </button>
                     </div>

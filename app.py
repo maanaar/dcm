@@ -642,6 +642,8 @@ async def create_routing_rule(request: Request):
         props = [s.strip() for s in body.get("bind", "").split(",") if s.strip()]
         if props:
             new_rule["dcmProperty"] = props
+        if body.get("queueName"):
+            new_rule["dcmQueueName"] = body["queueName"]
         try:
             if body.get("priority") not in (None, ""):
                 new_rule["dcmRulePriority"] = int(body["priority"])
@@ -746,9 +748,11 @@ async def list_routing_rules():
                     rules.append({
                         "cn":            rule.get("cn", ""),
                         "description":   rule.get("dicomDescription", ""),
-                        "sourceAETitle": rule.get("dcmForwardRuleSCUAETitle", []),
+                        "deviceName":    name,
                         "localAETitle":  local_ae,
+                        "sourceAETitle": rule.get("dcmForwardRuleSCUAETitle", []),
                         "destAETitle":   rule.get("dcmDestinationAETitle", []),
+                        "queueName":     rule.get("dcmQueueName", ""),
                         "bind":          rule.get("dcmProperty", []),
                         "priority":      rule.get("dcmRulePriority", 0),
                         "status":        "active",
