@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchPatients, fetchApplicationEntities } from '../services/dcmchee'; // Import the API function
+import { searchPatients, fetchWebApps } from '../services/dcmchee';
 
 export default function PatientSearch() {
   const navigate = useNavigate();
@@ -29,15 +29,14 @@ export default function PatientSearch() {
 
   const loadApplicationEntities = async () => {
     try {
-      const entities = await fetchApplicationEntities();
-      setApplicationEntities(Array.isArray(entities) ? entities : []);
-      // Set default to first AE if available
-      if (entities && entities.length > 0) {
-        const firstAE = entities[0].dicomAETitle || entities[0];
-        setFormData(prev => ({ ...prev, webAppService: firstAE }));
+      const webapps = await fetchWebApps();
+      setApplicationEntities(Array.isArray(webapps) ? webapps : []);
+      if (webapps && webapps.length > 0) {
+        const firstName = typeof webapps[0] === 'string' ? webapps[0] : webapps[0].dcmWebAppName;
+        setFormData(prev => ({ ...prev, webAppService: firstName }));
       }
     } catch (err) {
-      console.error('Error loading application entities:', err);
+      console.error('Error loading web apps:', err);
       setApplicationEntities([]);
     }
   };
@@ -177,14 +176,9 @@ export default function PatientSearch() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317] text-gray-800"
               >
-                {applicationEntities.map((ae, idx) => {
-                  const aeTitle = typeof ae === 'string' ? ae : ae.dicomAETitle;
-                  const aeDesc = typeof ae === 'object' ? (ae.dicomDescription || ae.dcmDescription || '') : '';
-                  return (
-                    <option key={idx} value={aeTitle}>
-                      {aeTitle}{aeDesc ? ` - ${aeDesc}` : ''}
-                    </option>
-                  );
+                {applicationEntities.map((app, idx) => {
+                  const name = typeof app === 'string' ? app : app.dcmWebAppName;
+                  return <option key={idx} value={name}>{name}</option>;
                 })}
               </select>
             </div>
