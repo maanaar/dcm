@@ -29,20 +29,15 @@ function StatCard({ label, value, sub, accent, loading }) {
 function HospitalCardSkeleton() {
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-      <div className="h-48 bg-slate-200 animate-pulse" />
+      <div className="h-20 bg-slate-200 animate-pulse" />
       <div className="p-4 space-y-3">
         <Skeleton className="h-4 w-3/4" />
-        <div className="grid grid-cols-3 gap-2">
-          <Skeleton className="h-12 rounded-lg" />
+        <div className="grid grid-cols-2 gap-2">
           <Skeleton className="h-12 rounded-lg" />
           <Skeleton className="h-12 rounded-lg" />
         </div>
         <Skeleton className="h-4 w-1/2" />
-        <div className="flex gap-1">
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-5 w-12 rounded-full" />
-        </div>
+        <Skeleton className="h-6 w-full rounded-lg" />
       </div>
     </div>
   );
@@ -54,20 +49,17 @@ const DEFAULT_VISIBLE = 12;
 export default function DashboardPage() {
   const navigate = useNavigate();
 
-  const [searchTerm, setSearchTerm]       = useState('');
-  const [typeFilter, setTypeFilter]       = useState('all');
-  const [statusFilter, setStatusFilter]   = useState('all');
-  const [showAll, setShowAll]             = useState(false);
+  const [searchTerm, setSearchTerm]   = useState('');
+  const [showAll, setShowAll]         = useState(false);
 
-  // API state
-  const [hospitals, setHospitals]         = useState([]);
-  const [apiStats, setApiStats]           = useState(null);
+  const [hospitals, setHospitals]           = useState([]);
+  const [apiStats, setApiStats]             = useState(null);
   const [hospitalsLoading, setHospitalsLoading] = useState(true);
-  const [statsLoading, setStatsLoading]   = useState(true);
+  const [statsLoading, setStatsLoading]     = useState(true);
   const [hospitalsError, setHospitalsError] = useState(null);
-  const [statsError, setStatsError]       = useState(null);
+  const [statsError, setStatsError]         = useState(null);
 
-  // ── Fetch hospitals from API ────────────────────────────────────────────────
+  // ── Fetch hospitals — already contain patientCount, studyCount, modalities ──
   useEffect(() => {
     setHospitalsLoading(true);
     fetchHospitals()
@@ -76,7 +68,7 @@ export default function DashboardPage() {
       .finally(()  => setHospitalsLoading(false));
   }, []);
 
-  // ── Fetch network-wide stats ────────────────────────────────────────────────
+  // ── Fetch network-wide KPI stats ───────────────────────────────────────────
   useEffect(() => {
     setStatsLoading(true);
     fetchDashboardStats()
@@ -85,72 +77,35 @@ export default function DashboardPage() {
       .finally(()  => setStatsLoading(false));
   }, []);
 
-  // ── Per-hospital stats: fetch each hospital’s own dashboard data ────────────────
-  const [hospitalStats, setHospitalStats] = useState({});  // { [id]: {totalPatients, totalStudies} }
+  // ── Filter logic ──────────────────────────────────────────────────────────
+  const filtered = hospitals.filter(h =>
+    (h.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  useEffect(() => {
-    if (!hospitals.length) return;
-    // Fetch each hospital’s dashboard in parallel — silently ignore failures
-    hospitals.forEach(h => {
-      fetch(`${import.meta.env.VITE_API_BASE || 'http://172.16.16.221:8000/api'}/dashboard/hospital/${h.id}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (!data) return;
-          setHospitalStats(prev => ({
-            ...prev,
-            [h.id]: {
-              patients: data.totalPatients?.toLocaleString() ?? '—',
-              studies:  data.totalStudies?.toLocaleString()  ?? '—',
-            },
-          }));
-        })
-        .catch(() => {});
-    });
-  }, [hospitals]);
-
-  // Merge per-hospital stats into the hospital list
-  const hospitalsWithStats = hospitals.map(h => ({
-    ...h,
-    patients: hospitalStats[h.id]?.patients ?? '—',
-    studies:  hospitalStats[h.id]?.studies  ?? '—',
-  }));
-
-  // ── Build type options dynamically from fetched hospitals ──────────────────
-  const typeOptions = ['all', ...Array.from(new Set(hospitals.map(h => h.type))).sort()];
-
-  // ── Filter logic ─────────────────────────────────────────────────────────
-  const filtered = hospitalsWithStats.filter(h => {
-    const q = searchTerm.toLowerCase();
-    const matchSearch =
-      h.name.toLowerCase().includes(q) ||
-      (h.location || '').toLowerCase().includes(q) ||
-      (h.type || '').toLowerCase().includes(q);
-    const matchType   = typeFilter   === 'all' || h.type   === typeFilter;
-    const matchStatus = statusFilter === 'all' || h.status === statusFilter;
-    return matchSearch && matchType && matchStatus;
-  });
-
-  // ── How many to show ───────────────────────────────────────────────────────
   const visibleHospitals = showAll ? filtered : filtered.slice(0, DEFAULT_VISIBLE);
   const hiddenCount      = filtered.length - DEFAULT_VISIBLE;
 
-  const activeCount      = hospitals.filter(h => h.status === 'active').length;
+  // ── Compute totals from hospitals list for the KPI row ────────────────────
+  const totalPatientsFromHospitals = hospitals.reduce((s, h) => s + (h.patientCount || 0), 0);
+  const totalStudiesFromHospitals  = hospitals.reduce((s, h) => s + (h.studyCount  || 0), 0);
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
 
-        {/* ── Header + KPI cards ────────────────────────────────────── */}
+        {/* ── Header + KPI cards ─────────────────────────────────────────── */}
         <div className="mb-6">
           <div className="wallpaper-page w-full bg-white/50 rounded-2xl backdrop-blur-md border shadow">
 
             {/* Title bar */}
             <div className="flex gap-2 px-6 py-3 border-b items-center">
               <img src="/logo-icon.png" width={50} height={50} alt="icon" className="inline-block" />
-              <h2 className="text-2xl mt-1 font-semibold font-[montserrat] text-gray-800">Hospital Dashboard</h2>
+              <h2 className="text-2xl mt-1 font-semibold font-[montserrat] text-gray-800">
+                Network Dashboard
+              </h2>
               {(hospitalsError || statsError) && (
                 <span className="ml-auto text-xs text-red-500 bg-red-50 border border-red-200 px-3 py-1 rounded-full">
-                  ⚠️ {hospitalsError || statsError}
+                  {hospitalsError || statsError}
                 </span>
               )}
             </div>
@@ -158,23 +113,31 @@ export default function DashboardPage() {
             {/* KPI row 1 */}
             <div className="grid grid-cols-1 md:grid-cols-3 px-4 pt-4 pb-2 gap-4">
               <StatCard
-                label="Total Hospitals"
+                label="Total Institutions"
                 value={hospitalsLoading ? '—' : hospitals.length}
-                sub={hospitalsLoading ? null : `${activeCount} Active`}
+                sub={hospitalsLoading ? null : `${hospitals.length} Active`}
                 accent="#31B6C5"
                 loading={hospitalsLoading}
               />
               <StatCard
                 label="Total Patients"
-                value={apiStats?.totalPatients?.toLocaleString() ?? '—'}
+                value={
+                  statsLoading
+                    ? '—'
+                    : (apiStats?.totalPatients ?? totalPatientsFromHospitals).toLocaleString()
+                }
                 accent="#1E7586"
-                loading={statsLoading}
+                loading={statsLoading && hospitalsLoading}
               />
               <StatCard
                 label="Total Studies"
-                value={apiStats?.totalStudies?.toLocaleString() ?? '—'}
+                value={
+                  statsLoading
+                    ? '—'
+                    : (apiStats?.totalStudies ?? totalStudiesFromHospitals).toLocaleString()
+                }
                 accent="#2F545B"
-                loading={statsLoading}
+                loading={statsLoading && hospitalsLoading}
               />
             </div>
 
@@ -203,52 +166,29 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* Search + filters */}
+            {/* Search bar */}
             <div className="flex flex-col md:flex-row gap-3 px-4 pb-4">
               <input
                 type="text"
-                placeholder="Search by name, location, or type…"
+                placeholder="Search institutions…"
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                onChange={e => { setSearchTerm(e.target.value); setShowAll(false); }}
                 className="flex-1 px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-[#31B6C5] bg-white text-slate-700 text-sm"
               />
-              <select
-                value={typeFilter}
-                onChange={e => setTypeFilter(e.target.value)}
-                className="px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-[#31B6C5] bg-white text-slate-700 text-sm"
-              >
-                {typeOptions.map(type => (
-                  <option key={type} value={type}>
-                    {type === 'all' ? '🏥 All Types' : type}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border rounded-xl outline-none focus:ring-2 focus:ring-[#31B6C5] bg-white text-slate-700 text-sm"
-              >
-                <option value="all">All Statuses</option>
-                <option value="active">🟢 Active</option>
-                <option value="maintenance">🟠 Maintenance</option>
-              </select>
-
-              {/* Results badge */}
               {!hospitalsLoading && (
                 <div className="flex items-center px-3 py-2 bg-[#00768310] rounded-xl text-sm text-[#0a6e79] font-medium whitespace-nowrap">
                   {showAll ? filtered.length : Math.min(filtered.length, DEFAULT_VISIBLE)}
-                  &nbsp;/ {filtered.length} hospitals
+                  &nbsp;/ {filtered.length} institutions
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* ── Hospital Cards Grid ───────────────────────────────────── */}
+        {/* ── Institution Cards Grid ─────────────────────────────────────── */}
         <div className="wallpaper-page w-full bg-white/50 rounded-2xl backdrop-blur-md border shadow p-4">
 
           {hospitalsLoading ? (
-            /* Skeleton grid */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => <HospitalCardSkeleton key={i} />)}
             </div>
@@ -256,14 +196,18 @@ export default function DashboardPage() {
             <div className="text-center py-16">
               <div className="text-5xl mb-3">🏥</div>
               <p className="text-slate-500 text-lg font-[montserrat]">
-                No hospitals found matching your criteria.
+                {searchTerm
+                  ? 'No institutions found matching your search.'
+                  : 'No institutions found.'}
               </p>
-              <button
-                onClick={() => { setSearchTerm(''); setTypeFilter('all'); setStatusFilter('all'); }}
-                className="mt-4 px-5 py-2 bg-[#31B6C5] text-white rounded-xl text-sm font-medium hover:bg-[#1E7586] transition"
-              >
-                Clear filters
-              </button>
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="mt-4 px-5 py-2 bg-[#31B6C5] text-white rounded-xl text-sm font-medium hover:bg-[#1E7586] transition"
+                >
+                  Clear search
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -272,13 +216,11 @@ export default function DashboardPage() {
                   <HospitalCard
                     key={hospital.id}
                     hospital={hospital}
-                    statsLoaded={hospital.id in hospitalStats}
                     onClick={() => navigate(`/hospital/${hospital.id}`)}
                   />
                 ))}
               </div>
 
-              {/* Show more / show less controls */}
               {filtered.length > DEFAULT_VISIBLE && (
                 <div className="mt-6 flex justify-center gap-3">
                   {!showAll ? (
@@ -286,15 +228,17 @@ export default function DashboardPage() {
                       onClick={() => setShowAll(true)}
                       className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#0a6e79] hover:bg-[#1E7586] text-white rounded-xl text-sm font-semibold transition shadow"
                     >
-                      Show all {filtered.length} hospitals
-                      <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs">+{hiddenCount}</span>
+                      Show all {filtered.length} institutions
+                      <span className="bg-white/20 px-2 py-0.5 rounded-lg text-xs">
+                        +{hiddenCount}
+                      </span>
                     </button>
                   ) : (
                     <button
                       onClick={() => setShowAll(false)}
                       className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-sm font-semibold transition"
                     >
-                      ↑ Show less
+                      Show less
                     </button>
                   )}
                 </div>
@@ -308,100 +252,110 @@ export default function DashboardPage() {
   );
 }
 
-// ─── Hospital Card component ──────────────────────────────────────────────────
-function HospitalCard({ hospital, statsLoaded, onClick }) {
+// ─── Hospital Card ─────────────────────────────────────────────────────────────
+// Now receives all data directly from the hospital object — no secondary fetch
+function HospitalCard({ hospital, onClick }) {
+  const {
+    name,
+    patientCount = 0,
+    studyCount   = 0,
+    modalities   = [],
+    departments  = [],
+    lastStudyDate,
+    address,
+  } = hospital;
+
   return (
     <div
       className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group border border-transparent hover:border-[#31B6C5]/30"
       onClick={onClick}
     >
-      {/* Image */}
-      <div className="h-48 relative overflow-hidden">
-        <img
-          src={hospital.image}
-          alt={hospital.name}
-          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-
-        {/* Status badge */}
-        <div className="absolute top-3 right-3">
-          <span className={`px-3 py-1 rounded-full text-xs font-semibold shadow ${
-            hospital.status === 'active'
-              ? 'bg-emerald-500 text-white'
-              : 'bg-orange-500 text-white'
-          }`}>
-            {hospital.status?.toUpperCase()}
-          </span>
+      {/* Gradient header */}
+      <div className="h-20 bg-gradient-to-br from-[#0a6e79] to-[#31B6C5] flex items-center px-5 relative">
+        <div className="bg-white/20 rounded-full p-3 mr-3 shrink-0">
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
         </div>
-
-        {/* Overlay: name + location */}
-        <div className="absolute bottom-3 left-4 right-4">
-          <p className="text-white font-bold text-base drop-shadow font-[montserrat] leading-tight">
-            {hospital.name}
-          </p>
-          <p className="text-white/80 text-xs mt-0.5">📍 {hospital.location}</p>
-        </div>
+        <p className="text-white font-bold text-sm font-[montserrat] leading-tight flex-1 truncate">
+          {name}
+        </p>
+        <span className="absolute top-3 right-3 px-2 py-0.5 bg-emerald-400 text-white rounded-full text-xs font-semibold shadow">
+          ACTIVE
+        </span>
       </div>
 
       {/* Body */}
       <div className="p-4">
-        <p className="text-xs text-slate-400 mb-3 font-medium uppercase tracking-wide">
-          {hospital.type}
+
+        {/* Address / last study */}
+        <p className="text-xs text-slate-400 mb-3 font-medium truncate">
+          {address
+            ? `📍 ${address}`
+            : lastStudyDate
+              ? `🗓 Last study: ${lastStudyDate}`
+              : 'No additional info'}
         </p>
 
-        {/* Live stats row */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
+        {/* Stats grid — data comes directly from grouped studies */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
           {[
-            { label: 'Beds',     value: hospital.beds, alwaysReady: true },
-            { label: 'Patients', value: statsLoaded ? hospital.patients : null },
-            { label: 'Studies',  value: statsLoaded ? hospital.studies : null },
+            { label: 'Patients', value: patientCount.toLocaleString() },
+            { label: 'Studies',  value: studyCount.toLocaleString()   },
           ].map(({ label, value }) => (
             <div key={label} className="text-center bg-[#00768310] rounded-lg p-2">
               <p className="text-xs text-slate-500 font-[lato]">{label}</p>
-              {value === null
-                ? <Skeleton className="h-5 w-10 mx-auto mt-1" />
-                : <p className="text-sm font-bold text-slate-800">{value}</p>
-              }
+              <p className="text-sm font-bold text-slate-800">{value}</p>
             </div>
           ))}
         </div>
 
-        {/* Departments */}
-        <div className="mb-3">
-          <p className="text-xs font-semibold text-slate-500 mb-1.5 font-[montserrat] uppercase tracking-wide">
-            Departments
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {(hospital.departments || []).slice(0, 3).map((dept, idx) => (
-              <span key={idx} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                {dept}
-              </span>
-            ))}
-            {(hospital.departments || []).length > 3 && (
-              <span className="text-xs bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">
-                +{hospital.departments.length - 3}
-              </span>
-            )}
+        {/* Modalities — from ModalitiesInStudy aggregation */}
+        {modalities.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs text-slate-400 mb-1.5 uppercase tracking-wide font-medium">
+              Modalities
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {modalities.map((m, i) => (
+                <span
+                  key={i}
+                  className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium border border-teal-100"
+                >
+                  {m}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Modalities */}
-        <div>
-          <p className="text-xs font-semibold text-slate-500 mb-1.5 font-[montserrat] uppercase tracking-wide">
-            Modalities
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {(hospital.modalities || []).map((m, idx) => (
-              <span key={idx} className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-medium">
-                {m}
-              </span>
-            ))}
+        {/* Departments — from InstitutionalDepartmentName aggregation */}
+        {departments.length > 0 && (
+          <div className="mb-3">
+            <p className="text-xs text-slate-400 mb-1.5 uppercase tracking-wide font-medium">
+              Departments
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {departments.slice(0, 3).map((d, i) => (
+                <span
+                  key={i}
+                  className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full"
+                >
+                  {d}
+                </span>
+              ))}
+              {departments.length > 3 && (
+                <span className="text-xs bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">
+                  +{departments.length - 3} more
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* View Dashboard CTA */}
-        <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+        {/* CTA */}
+        <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
           <span className="text-xs text-slate-400">Click to open dashboard</span>
           <span className="text-xs font-semibold text-[#0a6e79] group-hover:translate-x-1 transition-transform inline-block">
             View →

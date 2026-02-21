@@ -513,6 +513,24 @@ export const fetchRoutingRules = async () => {
   }
 };
 
+export const createRoutingRule = async (ruleData) => {
+  try {
+    const response = await fetch(`${API_BASE}/routing-rules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ruleData),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create routing rule: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error creating routing rule:', error);
+    throw error;
+  }
+};
+
 // ============================================================================
 // TRANSFORM RULES API
 // ============================================================================
@@ -527,6 +545,24 @@ export const fetchTransformRules = async () => {
     return await response.json();
   } catch (error) {
     console.error('❌ Error fetching transform rules:', error);
+    throw error;
+  }
+};
+
+export const createTransformRule = async (ruleData) => {
+  try {
+    const response = await fetch(`${API_BASE}/transform-rules`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ruleData),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create transform rule: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error creating transform rule:', error);
     throw error;
   }
 };

@@ -3,22 +3,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import httpx
 import os
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from urllib.parse import parse_qs, urlencode
 
 app = FastAPI()
 
-# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    # allow_origins=["http://172.16.16.221:5173","http://localhost:5173","http://smart.nextasolutions.net:5173","https://curalink.nextasolutions.net:5173"],  # No trailing slash
     allow_credentials=True,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Backend URLs
 KEYCLOAK_URL = os.getenv("KEYCLOAK_URL", "https://172.16.16.221:8843")
 DCM4CHEE_URL = os.getenv("DCM4CHEE_URL", "http://172.16.16.221:8080")
 USERNAME     = os.getenv("DCM4CHEE_USERNAME", "root")
@@ -26,19 +23,12 @@ PASSWORD     = os.getenv("DCM4CHEE_PASSWORD", "changeit")
 
 client = httpx.AsyncClient(verify=False)
 
-# ============================================================================
-# DCM4CHEE CONFIGURATION
-# ============================================================================
-
 DEFAULT_WEBAPP = os.getenv("DEFAULT_WEBAPP", "DCM4CHEE")
 
 def get_webapp_path(webapp: str) -> str:
     return f"/dcm4chee-arc/aets/{webapp}/rs"
 
-
-
 async def get_token() -> str:
-    """Get authentication token from Keycloak"""
     url = f"{KEYCLOAK_URL}/realms/dcm4che/protocol/openid-connect/token"
     data = {
         "grant_type": "password",
@@ -51,88 +41,130 @@ async def get_token() -> str:
         raise HTTPException(status_code=401, detail="Authentication failed")
     return response.json()["access_token"]
 
-
 def clean_query_params(query_string: str) -> str:
-    """Remove webAppService from query parameters"""
     if not query_string:
         return ""
-    
     params = parse_qs(query_string)
-    # Remove webAppService parameter
     params.pop('webAppService', None)
-    
-    # Rebuild query string
     return urlencode(params, doseq=True)
 
+def _gv(obj: dict, tag: str, idx: int = 0):
+    vals = obj.get(tag, {}).get("Value", [])
+    return vals[idx] if idx < len(vals) else ""
+
+def _fmt_date(raw: str) -> str:
+    if raw and len(raw) == 8:
+        return f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}"
+    return raw or ""
 
 # ============================================================================
-# HOSPITALS  — sourced from dcm4chee /institutions
+# HOSPITALS — built by grouping series by InstitutionName (series-level attribute)
 # ============================================================================
+
+async def _fetch_all_series(token: str, dcm_path: str) -> list:
+    """
+    Fetch series with the fields needed to build institution cards.
+    InstitutionName (00080080) is a series-level DICOM attribute, so this is
+    the most accurate source.
+    """
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+    resp = await client.get(
+        f"{DCM4CHEE_URL}{dcm_path}/series"
+        "?limit=5000"
+        "&includefield=00080080"   # InstitutionName
+        ",00080081"                # InstitutionAddress
+        ",00081040"                # InstitutionalDepartmentName
+        ",00080060"                # Modality
+        ",0020000D"                # StudyInstanceUID
+        ",00100020"                # PatientID
+        ",00080021"                # SeriesDate
+        ",00080031",               # SeriesTime
+        headers=headers,
+    )
+    if resp.status_code == 200:
+        return resp.json() or []
+    return []
+
+
+def _build_institutions_from_series(series_list: list) -> List[dict]:
+    """
+    Group series by InstitutionName.
+    - studyCount  = distinct StudyInstanceUIDs
+    - patientCount = distinct PatientIDs
+    - modalities   = distinct Modality values
+    - departments  = distinct InstitutionalDepartmentName values
+    - lastStudyDate = most recent SeriesDate
+    Sorted by studyCount descending.
+    """
+    buckets: Dict[str, dict] = {}
+
+    for s in series_list:
+        inst_name = _gv(s, "00080080") or "Unknown"
+
+        if inst_name not in buckets:
+            buckets[inst_name] = {
+                "address":     _gv(s, "00080081") or "",
+                "study_uids":  set(),
+                "patient_ids": set(),
+                "modalities":  set(),
+                "departments": set(),
+                "dates":       [],
+            }
+
+        b = buckets[inst_name]
+
+        uid = _gv(s, "0020000D")
+        if uid:
+            b["study_uids"].add(uid)
+
+        pid = _gv(s, "00100020")
+        if pid:
+            b["patient_ids"].add(pid)
+
+        mod = _gv(s, "00080060")
+        if mod:
+            b["modalities"].add(mod)
+
+        dept = _gv(s, "00081040")
+        if dept:
+            b["departments"].add(dept)
+
+        d = _gv(s, "00080021")
+        if d:
+            b["dates"].append(d)
+
+    result = []
+    for i, (name, b) in enumerate(
+        sorted(buckets.items(), key=lambda x: -len(x[1]["study_uids"]))
+    ):
+        result.append({
+            "id":              i + 1,
+            "name":            name,
+            "institutionName": name,
+            "address":         b["address"],
+            "status":          "active",
+            "studyCount":      len(b["study_uids"]),
+            "patientCount":    len(b["patient_ids"]),
+            "modalities":      sorted(b["modalities"]),
+            "departments":     sorted(b["departments"]),
+            "lastStudyDate":   _fmt_date(max(b["dates"])) if b["dates"] else None,
+        })
+
+    return result
+
 
 @app.get("/api/hospitals")
 async def list_hospitals():
-    """Return institutions from dcm4chee as hospital list.
-    Tries /institutions endpoint first; falls back to extracting InstitutionName
-    from study DICOM data (tag 00080080) if the primary endpoint returns nothing.
-    """
+    """Return institutions built by grouping series by InstitutionName."""
     try:
-        token = await get_token()
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-
-        # --- Primary: dcm4chee institutions endpoint ---
-        response = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/institutions",
-            headers=headers,
-        )
-        if response.status_code == 200:
-            names = [n for n in (response.json() or []) if n]
-            if names:
-                return [
-                    {"id": idx + 1, "name": name, "institutionName": name, "status": "active"}
-                    for idx, name in enumerate(names)
-                ]
-
-        # --- Fallback 1: extract InstitutionName from studies DICOM data ---
+        token    = await get_token()
         dcm_path = get_webapp_path(DEFAULT_WEBAPP)
-        studies_resp = await client.get(
-            f"{DCM4CHEE_URL}{dcm_path}/studies?limit=1000",
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"},
-        )
-        if studies_resp.status_code == 200:
-            seen = {}
-            for study in (studies_resp.json() or []):
-                raw_val = study.get("00080080", {}).get("Value", [])
-                inst = (raw_val[0] if raw_val else "")
-                if isinstance(inst, str):
-                    inst = inst.strip()
-                else:
-                    inst = ""
-                if inst and inst not in seen:
-                    seen[inst] = True
-            names = list(seen.keys())
-            if names:
-                return [
-                    {"id": idx + 1, "name": name, "institutionName": name, "status": "active"}
-                    for idx, name in enumerate(names)
-                ]
-
-        # --- Fallback 2: use QIDO-RS web app names as sites ---
-        webapps_resp = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/webapps?dcmWebServiceClass=QIDO_RS",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        if webapps_resp.status_code == 200:
-            apps = webapps_resp.json() or []
-            names = [a.get("dcmWebAppName", "") for a in apps if a.get("dcmWebAppName")]
-            if names:
-                return [
-                    {"id": idx + 1, "name": name, "institutionName": name, "status": "active"}
-                    for idx, name in enumerate(names)
-                ]
-
-        return []
+        series_list  = await _fetch_all_series(token, dcm_path)
+        institutions = _build_institutions_from_series(series_list)
+        print(f"[hospitals] {len(institutions)} institutions from {len(series_list)} series")
+        return institutions
     except Exception as e:
-        print(f"Error fetching institutions: {e}")
+        print(f"[hospitals] Error: {e}")
         return []
 
 
@@ -243,19 +275,8 @@ async def search_mwl(request: Request, webAppService: str = DEFAULT_WEBAPP):
 
 
 # ============================================================================
-# DASHBOARD helpers
+# DASHBOARD
 # ============================================================================
-
-def _gv(obj: dict, tag: str, idx: int = 0):
-    vals = obj.get(tag, {}).get("Value", [])
-    return vals[idx] if idx < len(vals) else ""
-
-
-def _fmt_date(raw: str) -> str:
-    if raw and len(raw) == 8:
-        return f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}"
-    return raw or ""
-
 
 def _transform_study_for_dashboard(study: dict, idx: int) -> dict:
     pat_raw = _gv(study, "00100010")
@@ -326,18 +347,14 @@ async def _aggregate_stats(studies_raw: list, total_patients: int, hospital_id: 
     return result
 
 
-# ============================================================================
-# DASHBOARD
-# ============================================================================
-
 @app.get("/api/dashboard")
 async def get_dashboard_stats():
     """Network-wide aggregated dashboard statistics."""
     try:
         token   = await get_token()
         headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
-
         dcm_path = get_webapp_path(DEFAULT_WEBAPP)
+
         studies_resp = await client.get(
             f"{DCM4CHEE_URL}{dcm_path}/studies?limit=1000&orderby=-StudyDate",
             headers=headers,
@@ -359,7 +376,13 @@ async def get_dashboard_stats():
                 or len(patients_resp.json() or [])
             )
 
-        return await _aggregate_stats(studies_raw, total_patients)
+        # Also enrich with institution breakdown
+        series_list = await _fetch_all_series(token, dcm_path)
+        institutions = _build_institutions_from_series(series_list)
+
+        stats = await _aggregate_stats(studies_raw, total_patients)
+        stats["institutionCount"] = len(institutions)
+        return stats
 
     except HTTPException:
         raise
@@ -369,15 +392,20 @@ async def get_dashboard_stats():
 
 @app.get("/api/dashboard/hospital/{hospital_id}")
 async def get_hospital_dashboard(hospital_id: str):
-    """Per-hospital dashboard with InstitutionName filtering"""
+    """
+    Per-hospital dashboard.
+    Loads all studies, groups by InstitutionName, then filters to just this hospital.
+    """
     try:
-        token   = await get_token()
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+        token    = await get_token()
+        headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+        dcm_path = get_webapp_path(DEFAULT_WEBAPP)
 
+        # Get the institution name for this hospital_id
+        hospitals = await list_hospitals()
         institution_name = None
         try:
             hid = int(hospital_id)
-            hospitals = await list_hospitals()
             for h in hospitals:
                 if h["id"] == hid:
                     institution_name = h.get("institutionName")
@@ -385,41 +413,46 @@ async def get_hospital_dashboard(hospital_id: str):
         except (ValueError, TypeError):
             pass
 
-        dcm_path = get_webapp_path(DEFAULT_WEBAPP)
-        query = "limit=1000&orderby=-StudyDate"
-        if institution_name:
-            query += f"&InstitutionName=*{institution_name}*"
+        # Fetch studies — try InstitutionName filter first (study-level tag, may work)
+        query = "limit=2000&orderby=-StudyDate&includefield=00080080,00080061,00100020,00080020,00081030,00080050,00201206,00201208"
+        if institution_name and institution_name != "Unknown":
+            query += f"&InstitutionName={institution_name}"
 
-        studies_url = f"{DCM4CHEE_URL}{dcm_path}/studies?{query}"
-        studies_resp = await client.get(studies_url, headers=headers)
-
+        studies_resp = await client.get(
+            f"{DCM4CHEE_URL}{dcm_path}/studies?{query}",
+            headers=headers,
+        )
         studies_raw: list = []
         if studies_resp.status_code == 200:
             studies_raw = studies_resp.json() or []
-        elif studies_resp.status_code not in (204, 404):
-            raise HTTPException(status_code=studies_resp.status_code, detail=studies_resp.text)
 
-        pat_query = "limit=1"
-        if institution_name:
-            pat_query += f"&InstitutionName=*{institution_name}*"
-
-        patients_url = f"{DCM4CHEE_URL}{dcm_path}/patients?{pat_query}"
-        patients_resp = await client.get(patients_url, headers=headers)
-
-        total_patients = 0
-        if patients_resp.status_code == 200:
-            total_patients = int(
-                patients_resp.headers.get("X-Total-Count", 0)
-                or len(patients_resp.json() or [])
-            )
-
-        if not studies_raw:
-            fallback_resp = await client.get(
-                f"{DCM4CHEE_URL}{dcm_path}/studies?limit=1000&orderby=-StudyDate",
+        # If the server-side filter returned nothing, fall back:
+        # fetch all studies and filter client-side using series InstitutionName map
+        if not studies_raw and institution_name and institution_name != "Unknown":
+            all_studies_resp = await client.get(
+                f"{DCM4CHEE_URL}{dcm_path}/studies?limit=2000&orderby=-StudyDate"
+                "&includefield=00080080,00080061,00100020,00080020,00081030,00080050,00201206,00201208",
                 headers=headers,
             )
-            if fallback_resp.status_code == 200:
-                studies_raw = fallback_resp.json() or []
+            all_studies = all_studies_resp.json() if all_studies_resp.status_code == 200 else []
+            series_list = await _fetch_all_series(token, dcm_path)
+            uid_to_inst = {
+                _gv(s, "0020000D"): _gv(s, "00080080") or ""
+                for s in series_list
+                if _gv(s, "0020000D")
+            }
+
+            studies_raw = [
+                s for s in all_studies
+                if (
+                    uid_to_inst.get(_gv(s, "0020000D"), "").lower() == institution_name.lower()
+                    or (_gv(s, "00080080") or "").lower() == institution_name.lower()
+                )
+            ]
+
+        # Count unique patients in this institution's studies
+        patient_ids = {_gv(s, "00100020") for s in studies_raw if _gv(s, "00100020")}
+        total_patients = len(patient_ids)
 
         return await _aggregate_stats(studies_raw, total_patients, hospital_id=hospital_id)
 
@@ -456,23 +489,18 @@ async def search_series(request: Request, webAppService: str = DEFAULT_WEBAPP):
 
 
 # ============================================================================
-# DEVICES CONFIGURATION
+# DEVICES
 # ============================================================================
 
 @app.get("/api/devices")
 async def list_devices():
-    """List all configured DICOM devices"""
     try:
         token = await get_token()
-
         url = f"{DCM4CHEE_URL}/dcm4chee-arc/devices"
         headers = {"Authorization": f"Bearer {token}"}
-
         response = await client.get(url, headers=headers)
-
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-
         return response.json()
     except HTTPException:
         raise
@@ -482,18 +510,13 @@ async def list_devices():
 
 @app.get("/api/devices/{device_name}")
 async def get_device(device_name: str):
-    """Get specific device configuration"""
     try:
         token = await get_token()
-
         url = f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{device_name}"
         headers = {"Authorization": f"Bearer {token}"}
-
         response = await client.get(url, headers=headers)
-
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-
         return response.json()
     except HTTPException:
         raise
@@ -502,7 +525,7 @@ async def get_device(device_name: str):
 
 
 # ============================================================================
-# ROUTING RULES  (dcmForwardRule extracted from device config)
+# ROUTING / TRANSFORM RULES
 # ============================================================================
 
 async def _get_device_config(token: str, device_name: str) -> dict:
@@ -511,22 +534,152 @@ async def _get_device_config(token: str, device_name: str) -> dict:
     return resp.json() if resp.status_code == 200 else {}
 
 
-@app.get("/api/routing-rules")
-async def list_routing_rules():
-    """Extract Forward Rules from all device configurations."""
+async def _find_ae_in_devices(token: str, local_ae: str, device_names: list):
+    """Return (device_name, config, ae_index) for the device that owns local_ae."""
+    headers = {"Authorization": f"Bearer {token}"}
+    for name in device_names:
+        config = await _get_device_config(token, name)
+        for idx, ae in enumerate(config.get("dicomNetworkAE", [])):
+            if ae.get("dicomAETitle") == local_ae:
+                return name, config, idx
+    # Fallback: first device, first AE
+    if device_names:
+        config = await _get_device_config(token, device_names[0])
+        if config.get("dicomNetworkAE"):
+            return device_names[0], config, 0
+    return None, None, None
+
+
+@app.post("/api/routing-rules")
+async def create_routing_rule(request: Request):
+    """Add a dcmForwardRule to the device that owns the given localAETitle."""
     try:
+        body = await request.json()
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}"}
 
         devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
         if devices_resp.status_code != 200:
-            return []
-
+            raise HTTPException(status_code=500, detail="Could not fetch devices")
         device_names = [
             d["dicomDeviceName"] if isinstance(d, dict) else d
             for d in (devices_resp.json() or [])
         ]
 
+        local_ae = body.get("localAETitle", DEFAULT_WEBAPP)
+        dev_name, config, ae_idx = await _find_ae_in_devices(token, local_ae, device_names)
+        if dev_name is None:
+            raise HTTPException(status_code=404, detail=f"AE '{local_ae}' not found in any device")
+
+        ae = config["dicomNetworkAE"][ae_idx]
+        local_ae = ae.get("dicomAETitle", local_ae)
+        dcm_ae = ae.setdefault("dcmNetworkAE", {})
+        existing = dcm_ae.setdefault("dcmForwardRule", [])
+
+        rule_cn = body.get("cn") or f"forward-rule-{len(existing) + 1}"
+        new_rule: Dict = {"cn": rule_cn}
+
+        src = [s.strip() for s in body.get("sourceAETitle", "").split(",") if s.strip()]
+        if src:
+            new_rule["dcmForwardRuleSCUAETitle"] = src
+        dst = [s.strip() for s in body.get("destAETitle", "").split(",") if s.strip()]
+        if dst:
+            new_rule["dcmDestinationAETitle"] = dst
+        try:
+            if body.get("priority") not in (None, ""):
+                new_rule["dcmRulePriority"] = int(body["priority"])
+        except (ValueError, TypeError):
+            pass
+
+        existing.append(new_rule)
+
+        put_resp = await client.put(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{dev_name}",
+            json=config,
+            headers={**headers, "Content-Type": "application/json"},
+        )
+        if put_resp.status_code not in (200, 204):
+            raise HTTPException(status_code=put_resp.status_code, detail=put_resp.text)
+
+        return {"success": True, "cn": rule_cn, "localAETitle": local_ae, "device": dev_name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/transform-rules")
+async def create_transform_rule(request: Request):
+    """Add a dcmCoercionRule to the device that owns the given localAETitle."""
+    try:
+        body = await request.json()
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+        if devices_resp.status_code != 200:
+            raise HTTPException(status_code=500, detail="Could not fetch devices")
+        device_names = [
+            d["dicomDeviceName"] if isinstance(d, dict) else d
+            for d in (devices_resp.json() or [])
+        ]
+
+        local_ae = body.get("localAETitle", DEFAULT_WEBAPP)
+        dev_name, config, ae_idx = await _find_ae_in_devices(token, local_ae, device_names)
+        if dev_name is None:
+            raise HTTPException(status_code=404, detail=f"AE '{local_ae}' not found in any device")
+
+        ae = config["dicomNetworkAE"][ae_idx]
+        local_ae = ae.get("dicomAETitle", local_ae)
+        dcm_ae = ae.setdefault("dcmNetworkAE", {})
+        existing = dcm_ae.setdefault("dcmCoercionRule", [])
+
+        rule_cn = body.get("cn") or f"coercion-rule-{len(existing) + 1}"
+        new_rule: Dict = {"cn": rule_cn}
+
+        if body.get("description"):
+            new_rule["dicomDescription"] = body["description"]
+        if body.get("sourceAE"):
+            new_rule["dcmCoercionAETitlePattern"] = body["sourceAE"]
+        if body.get("target"):
+            new_rule["dcmURI"] = body["target"]
+        if body.get("gateway"):
+            new_rule["dcmCoercionSuffix"] = body["gateway"]
+        try:
+            if body.get("priority") not in (None, ""):
+                new_rule["dcmRulePriority"] = int(body["priority"])
+        except (ValueError, TypeError):
+            pass
+
+        existing.append(new_rule)
+
+        put_resp = await client.put(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{dev_name}",
+            json=config,
+            headers={**headers, "Content-Type": "application/json"},
+        )
+        if put_resp.status_code not in (200, 204):
+            raise HTTPException(status_code=put_resp.status_code, detail=put_resp.text)
+
+        return {"success": True, "cn": rule_cn, "localAETitle": local_ae, "device": dev_name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/routing-rules")
+async def list_routing_rules():
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+        if devices_resp.status_code != 200:
+            return []
+        device_names = [
+            d["dicomDeviceName"] if isinstance(d, dict) else d
+            for d in (devices_resp.json() or [])
+        ]
         rules = []
         for name in device_names:
             config = await _get_device_config(token, name)
@@ -534,14 +687,14 @@ async def list_routing_rules():
                 local_ae = ae.get("dicomAETitle", "")
                 for rule in ae.get("dcmNetworkAE", {}).get("dcmForwardRule", []):
                     rules.append({
-                        "cn":             rule.get("cn", ""),
-                        "description":    rule.get("dicomDescription", ""),
-                        "sourceAETitle":  rule.get("dcmForwardRuleSCUAETitle", []),
-                        "localAETitle":   local_ae,
-                        "destAETitle":    rule.get("dcmDestinationAETitle", []),
-                        "bind":           rule.get("dcmProperty", []),
-                        "priority":       rule.get("dcmRulePriority", 0),
-                        "status":         "active",
+                        "cn":            rule.get("cn", ""),
+                        "description":   rule.get("dicomDescription", ""),
+                        "sourceAETitle": rule.get("dcmForwardRuleSCUAETitle", []),
+                        "localAETitle":  local_ae,
+                        "destAETitle":   rule.get("dcmDestinationAETitle", []),
+                        "bind":          rule.get("dcmProperty", []),
+                        "priority":      rule.get("dcmRulePriority", 0),
+                        "status":        "active",
                     })
         return rules
     except Exception as e:
@@ -551,20 +704,16 @@ async def list_routing_rules():
 
 @app.get("/api/transform-rules")
 async def list_transform_rules():
-    """Extract Coercion Rules from all device configurations."""
     try:
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}"}
-
         devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
         if devices_resp.status_code != 200:
             return []
-
         device_names = [
             d["dicomDeviceName"] if isinstance(d, dict) else d
             for d in (devices_resp.json() or [])
         ]
-
         rules = []
         for name in device_names:
             config = await _get_device_config(token, name)
@@ -572,14 +721,14 @@ async def list_transform_rules():
                 local_ae = ae.get("dicomAETitle", "")
                 for rule in ae.get("dcmNetworkAE", {}).get("dcmCoercionRule", []):
                     rules.append({
-                        "cn":          rule.get("cn", ""),
-                        "description": rule.get("dicomDescription", ""),
+                        "cn":           rule.get("cn", ""),
+                        "description":  rule.get("dicomDescription", ""),
                         "localAETitle": local_ae,
-                        "sourceAE":    rule.get("dcmCoercionAETitlePattern", ""),
-                        "target":      rule.get("dcmURI", ""),
-                        "gateway":     rule.get("dcmCoercionSuffix", ""),
-                        "priority":    rule.get("dcmRulePriority", 0),
-                        "status":      "active",
+                        "sourceAE":     rule.get("dcmCoercionAETitlePattern", ""),
+                        "target":       rule.get("dcmURI", ""),
+                        "gateway":      rule.get("dcmCoercionSuffix", ""),
+                        "priority":     rule.get("dcmRulePriority", 0),
+                        "status":       "active",
                     })
         return rules
     except Exception as e:
@@ -588,12 +737,11 @@ async def list_transform_rules():
 
 
 # ============================================================================
-# WEB APP SERVICES (QIDO-RS capable)
+# WEB APPS / AES / HL7
 # ============================================================================
 
 @app.get("/api/webapps")
 async def list_webapps():
-    """List Web Application Services that have QIDO_RS capability."""
     try:
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -609,24 +757,16 @@ async def list_webapps():
         return []
 
 
-# ============================================================================
-# APPLICATION ENTITIES (AE TITLES)
-# ============================================================================
-
 @app.get("/api/aes")
 async def list_application_entities():
-    """List all Application Entity Titles"""
     try:
         token = await get_token()
-
-        url = f"{DCM4CHEE_URL}/dcm4chee-arc/aes"
-        headers = {"Authorization": f"Bearer {token}"}
-
-        response = await client.get(url, headers=headers)
-
+        response = await client.get(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/aes",
+            headers={"Authorization": f"Bearer {token}"},
+        )
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-
         return response.json()
     except HTTPException:
         raise
@@ -636,18 +776,14 @@ async def list_application_entities():
 
 @app.get("/api/aes/{aet}")
 async def get_application_entity(aet: str):
-    """Get specific Application Entity configuration"""
     try:
         token = await get_token()
-
-        url = f"{DCM4CHEE_URL}/dcm4chee-arc/aes/{aet}"
-        headers = {"Authorization": f"Bearer {token}"}
-
-        response = await client.get(url, headers=headers)
-
+        response = await client.get(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/aes/{aet}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-
         return response.json()
     except HTTPException:
         raise
@@ -655,24 +791,16 @@ async def get_application_entity(aet: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ============================================================================
-# HL7 APPLICATIONS
-# ============================================================================
-
 @app.get("/api/hl7apps")
 async def list_hl7_applications():
-    """List all HL7 applications"""
     try:
         token = await get_token()
-
-        url = f"{DCM4CHEE_URL}/dcm4chee-arc/hl7apps"
-        headers = {"Authorization": f"Bearer {token}"}
-
-        response = await client.get(url, headers=headers)
-
+        response = await client.get(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/hl7apps",
+            headers={"Authorization": f"Bearer {token}"},
+        )
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-
         return response.json()
     except HTTPException:
         raise
@@ -682,18 +810,14 @@ async def list_hl7_applications():
 
 @app.get("/api/hl7apps/{hl7_app_name}")
 async def get_hl7_application(hl7_app_name: str):
-    """Get specific HL7 application configuration"""
     try:
         token = await get_token()
-
-        url = f"{DCM4CHEE_URL}/dcm4chee-arc/hl7apps/{hl7_app_name}"
-        headers = {"Authorization": f"Bearer {token}"}
-
-        response = await client.get(url, headers=headers)
-
+        response = await client.get(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/hl7apps/{hl7_app_name}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-
         return response.json()
     except HTTPException:
         raise
@@ -702,23 +826,73 @@ async def get_hl7_application(hl7_app_name: str):
 
 
 # ============================================================================
-# HEALTH
+# MODALITIES
 # ============================================================================
 
 @app.get("/api/modalities")
 async def list_modalities():
-    """Return distinct modalities from dcm4chee received series."""
     try:
         token = await get_token()
-        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
-        response = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/modalities", headers=headers)
+        response = await client.get(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/modalities",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+        )
         if response.status_code == 200:
-            return response.json()  # list of modality strings
+            return response.json()
         return []
     except Exception as e:
         print(f"Error fetching modalities: {e}")
         return []
 
+
+# ============================================================================
+# DEBUG
+# ============================================================================
+
+@app.get("/api/debug/institutions")
+async def debug_institutions():
+    try:
+        token    = await get_token()
+        dcm_path = get_webapp_path(DEFAULT_WEBAPP)
+        headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
+
+        studies_resp = await client.get(
+            f"{DCM4CHEE_URL}{dcm_path}/studies?limit=50&includefield=00080080",
+            headers=headers,
+        )
+        studies_data = studies_resp.json() if studies_resp.status_code == 200 else []
+        study_names = list({
+            s.get("00080080", {}).get("Value", [""])[0]
+            for s in studies_data
+            if s.get("00080080", {}).get("Value")
+        })
+
+        series_resp = await client.get(
+            f"{DCM4CHEE_URL}{dcm_path}/series?limit=50&includefield=00080080",
+            headers=headers,
+        )
+        series_data = series_resp.json() if series_resp.status_code == 200 else []
+        series_names = list({
+            s.get("00080080", {}).get("Value", [""])[0]
+            for s in series_data
+            if s.get("00080080", {}).get("Value")
+        })
+
+        return {
+            "studies_status": studies_resp.status_code,
+            "study_count": len(studies_data),
+            "institution_names_in_studies": study_names,
+            "series_status": series_resp.status_code,
+            "series_count": len(series_data),
+            "institution_names_in_series": series_names,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ============================================================================
+# HEALTH
+# ============================================================================
 
 @app.get("/health")
 async def health_check():
