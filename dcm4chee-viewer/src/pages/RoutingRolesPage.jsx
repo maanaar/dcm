@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchRoutingRules, createRoutingRule } from '../services/dcmchee';
 
 const BLANK = {
-  cn: '', sourceAETitle: '', localAETitle: '', destAETitle: '', bind: '', priority: '',
+  cn: '', description: '', sourceAETitle: '', localAETitle: '', destAETitle: '', bind: '', priority: '',
 };
 
 const inp =
@@ -45,6 +45,7 @@ export default function RoutingRolesPage() {
       // optimistic: append to list immediately
       setRules(prev => [...prev, {
         cn:            newRule.cn || `forward-rule-${prev.length + 1}`,
+        description:   newRule.description,
         sourceAETitle: newRule.sourceAETitle ? newRule.sourceAETitle.split(',').map(s => s.trim()).filter(Boolean) : [],
         localAETitle:  newRule.localAETitle,
         destAETitle:   newRule.destAETitle   ? newRule.destAETitle.split(',').map(s => s.trim()).filter(Boolean)   : [],
@@ -150,10 +151,11 @@ export default function RoutingRolesPage() {
                     <tr className="bg-[#0a6e79] text-white text-left">
                       <th className="px-4 py-3 font-semibold w-8">#</th>
                       <th className="px-4 py-3 font-semibold">Name</th>
+                      <th className="px-4 py-3 font-semibold">Description</th>
                       <th className="px-4 py-3 font-semibold">Source AEs</th>
                       <th className="px-4 py-3 font-semibold">Local AE</th>
                       <th className="px-4 py-3 font-semibold">Destination AEs</th>
-                      <th className="px-4 py-3 font-semibold">Bind</th>
+                      <th className="px-4 py-3 font-semibold">Property Filter</th>
                       <th className="px-4 py-3 font-semibold w-16">Priority</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
                     </tr>
@@ -166,6 +168,7 @@ export default function RoutingRolesPage() {
                       >
                         <td className="px-4 py-3 text-gray-400">{idx + 1}</td>
                         <td className="px-4 py-3 font-semibold text-[#0a6e79]">{rule.cn || '—'}</td>
+                        <td className="px-4 py-3 text-gray-600 text-xs">{rule.description || '—'}</td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             {Array.isArray(rule.sourceAETitle) && rule.sourceAETitle.length
@@ -202,6 +205,10 @@ export default function RoutingRolesPage() {
                         <td className="px-3 py-2">
                           <input className={inp} placeholder="Rule name" value={newRule.cn}
                             onChange={e => setNewRule(p => ({ ...p, cn: e.target.value }))} />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input className={inp} placeholder="Description" value={newRule.description}
+                            onChange={e => setNewRule(p => ({ ...p, description: e.target.value }))} />
                         </td>
                         <td className="px-3 py-2">
                           <input className={inp} placeholder="AE1, AE2" value={newRule.sourceAETitle}
@@ -301,12 +308,13 @@ export default function RoutingRolesPage() {
                       <span className="font-semibold text-[#0a6e79] text-sm">New Routing Rule</span>
                     </div>
                     {[
-                      { label: 'Name (cn)',       key: 'cn',            ph: 'forward-rule-1' },
-                      { label: 'Source AEs',      key: 'sourceAETitle', ph: 'AE1, AE2' },
-                      { label: 'Local AE',        key: 'localAETitle',  ph: 'DCM4CHEE' },
-                      { label: 'Destination AEs', key: 'destAETitle',   ph: 'DEST1, DEST2' },
-                      { label: 'Bind',            key: 'bind',          ph: 'prop=value' },
-                      { label: 'Priority',        key: 'priority',      ph: '0', type: 'number' },
+                      { label: 'Name (cn)',        key: 'cn',            ph: 'forward-rule-1' },
+                      { label: 'Description',      key: 'description',   ph: 'Description' },
+                      { label: 'Source AEs',       key: 'sourceAETitle', ph: 'AE1, AE2' },
+                      { label: 'Local AE',         key: 'localAETitle',  ph: 'DCM4CHEE' },
+                      { label: 'Destination AEs',  key: 'destAETitle',   ph: 'DEST1, DEST2' },
+                      { label: 'Property Filter',  key: 'bind',          ph: 'Modality=CT' },
+                      { label: 'Priority',         key: 'priority',      ph: '0', type: 'number' },
                     ].map(({ label, key, ph, type }) => (
                       <div key={key}>
                         <label className="text-xs text-gray-500 uppercase font-medium">{label}</label>

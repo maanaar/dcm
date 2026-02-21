@@ -579,12 +579,17 @@ async def create_routing_rule(request: Request):
         rule_cn = body.get("cn") or f"forward-rule-{len(existing) + 1}"
         new_rule: Dict = {"cn": rule_cn}
 
+        if body.get("description"):
+            new_rule["dicomDescription"] = body["description"]
         src = [s.strip() for s in body.get("sourceAETitle", "").split(",") if s.strip()]
         if src:
             new_rule["dcmForwardRuleSCUAETitle"] = src
         dst = [s.strip() for s in body.get("destAETitle", "").split(",") if s.strip()]
         if dst:
             new_rule["dcmDestinationAETitle"] = dst
+        props = [s.strip() for s in body.get("bind", "").split(",") if s.strip()]
+        if props:
+            new_rule["dcmProperty"] = props
         try:
             if body.get("priority") not in (None, ""):
                 new_rule["dcmRulePriority"] = int(body["priority"])
