@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import httpx
 import os
+import time
+import asyncio
 from typing import Optional, Dict, List
 from urllib.parse import parse_qs, urlencode
 
@@ -25,10 +27,20 @@ client = httpx.AsyncClient(verify=False, timeout=30.0)
 
 DEFAULT_WEBAPP = os.getenv("DEFAULT_WEBAPP", "DCM4CHEE")
 
+# ── Simple in-memory caches ────────────────────────────────────────────────────
+_token_cache: Dict[str, float] = {"value": "", "expires_at": 0.0}
+_hospitals_cache: Dict = {"data": None, "expires_at": 0.0}
+HOSPITALS_TTL = 300  # rebuild institutions every 5 minutes
+# ──────────────────────────────────────────────────────────────────────────────
+
 def get_webapp_path(webapp: str) -> str:
     return f"/dcm4chee-arc/aets/{webapp}/rs"
 
 async def get_token() -> str:
+    now = time.monotonic()
+    if _token_cache["value"] and now < _token_cache["expires_at"]:
+        return _token_cache["value"]
+
     url = f"{KEYCLOAK_URL}/realms/dcm4che/protocol/openid-connect/token"
     data = {
         "grant_type": "password",
@@ -39,7 +51,11 @@ async def get_token() -> str:
     response = await client.post(url, data=data)
     if response.status_code != 200:
         raise HTTPException(status_code=401, detail="Authentication failed")
-    return response.json()["access_token"]
+    payload = response.json()
+    _token_cache["value"] = payload["access_token"]
+    # Cache for 80 % of the token's lifetime (default Keycloak tokens live 5 min)
+    _token_cache["expires_at"] = now + payload.get("expires_in", 300) * 0.8
+    return _token_cache["value"]
 
 def clean_query_params(query_string: str) -> str:
     if not query_string:
@@ -190,19 +206,26 @@ def _build_institutions_from_series(series_list: list, studies_list: list = None
 
 @app.get("/api/hospitals")
 async def list_hospitals():
-    """Return institutions built by grouping series (primary) + studies (supplemental) by InstitutionName."""
+    """Return institutions built by grouping series + studies by InstitutionName (cached 5 min)."""
+    now = time.monotonic()
+    if _hospitals_cache["data"] is not None and now < _hospitals_cache["expires_at"]:
+        return _hospitals_cache["data"]
+
     try:
         token    = await get_token()
         dcm_path = get_webapp_path(DEFAULT_WEBAPP)
 
-        # Primary: series-level InstitutionName (paginated)
-        series_list = await _fetch_all_series(token, dcm_path)
-
-        # Supplemental: study-level InstitutionName (paginated)
-        studies_sup = await _fetch_all_studies_sup(token, dcm_path)
+        # Fetch series and studies in parallel instead of sequentially
+        series_list, studies_sup = await asyncio.gather(
+            _fetch_all_series(token, dcm_path),
+            _fetch_all_studies_sup(token, dcm_path),
+        )
 
         institutions = _build_institutions_from_series(series_list, studies_sup)
         print(f"[hospitals] {len(institutions)} institutions from {len(series_list)} series + {len(studies_sup)} studies")
+
+        _hospitals_cache["data"] = institutions
+        _hospitals_cache["expires_at"] = now + HOSPITALS_TTL
         return institutions
     except Exception as e:
         print(f"[hospitals] Error: {e}")
