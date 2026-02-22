@@ -1186,6 +1186,229 @@ async def list_export_tasks():
 
 
 # ============================================================================
+# USER MANAGEMENT  (Keycloak Admin REST API)
+# ============================================================================
+
+KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "dcm4che")
+
+async def get_admin_token() -> str:
+    """Get a Keycloak master-realm admin token for the Admin REST API."""
+    url = f"{KEYCLOAK_URL}/realms/master/protocol/openid-connect/token"
+    data = {
+        "grant_type": "password",
+        "client_id":  "admin-cli",
+        "username":   USERNAME,
+        "password":   PASSWORD,
+    }
+    resp = await client.post(url, data=data, verify=False, timeout=15)
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+
+@app.get("/api/users")
+async def list_users():
+    try:
+        token = await get_admin_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        resp = await client.get(
+            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users?max=200",
+            headers=headers, verify=False, timeout=15,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        users = resp.json()
+        # Fetch roles for each user in parallel
+        async def with_roles(u):
+            r = await client.get(
+                f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{u['id']}/role-mappings/realm",
+                headers=headers, verify=False, timeout=10,
+            )
+            u["roles"] = [role["name"] for role in (r.json() if r.status_code == 200 else [])]
+            return u
+        return await asyncio.gather(*[with_roles(u) for u in users])
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/users")
+async def create_user(request: Request):
+    try:
+        body   = await request.json()
+        token  = await get_admin_token()
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+        payload: Dict = {
+            "username":  body.get("username", ""),
+            "email":     body.get("email", ""),
+            "firstName": body.get("firstName", ""),
+            "lastName":  body.get("lastName", ""),
+            "enabled":   body.get("enabled", True),
+        }
+        if body.get("password"):
+            payload["credentials"] = [{"type": "password", "value": body["password"], "temporary": False}]
+
+        resp = await client.post(
+            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users",
+            json=payload, headers=headers, verify=False, timeout=15,
+        )
+        if resp.status_code not in (200, 201):
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+
+        # Retrieve the new user's ID from Location header
+        location = resp.headers.get("location", "")
+        user_id  = location.rstrip("/").split("/")[-1] if location else None
+
+        # Assign roles if any
+        role_names: list = body.get("roles", [])
+        if role_names and user_id:
+            roles_resp = await client.get(
+                f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/roles",
+                headers={"Authorization": f"Bearer {token}"}, verify=False, timeout=10,
+            )
+            all_roles = roles_resp.json() if roles_resp.status_code == 200 else []
+            to_assign  = [r for r in all_roles if r["name"] in role_names]
+            if to_assign:
+                await client.post(
+                    f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
+                    json=to_assign,
+                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                    verify=False, timeout=10,
+                )
+
+        return {"success": True, "id": user_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/users/{user_id}")
+async def update_user(user_id: str, request: Request):
+    try:
+        body    = await request.json()
+        token   = await get_admin_token()
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        payload: Dict = {}
+        for field in ("email", "firstName", "lastName", "enabled"):
+            if field in body:
+                payload[field] = body[field]
+        resp = await client.put(
+            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}",
+            json=payload, headers=headers, verify=False, timeout=15,
+        )
+        if resp.status_code not in (200, 204):
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/users/{user_id}")
+async def delete_user(user_id: str):
+    try:
+        token   = await get_admin_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        resp = await client.delete(
+            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}",
+            headers=headers, verify=False, timeout=15,
+        )
+        if resp.status_code not in (200, 204):
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/users/{user_id}/roles")
+async def get_user_roles(user_id: str):
+    try:
+        token   = await get_admin_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        resp = await client.get(
+            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
+            headers=headers, verify=False, timeout=10,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/users/{user_id}/roles")
+async def set_user_roles(user_id: str, request: Request):
+    """Replace all realm roles for a user."""
+    try:
+        body      = await request.json()
+        role_names: list = body.get("roles", [])
+        token     = await get_admin_token()
+        auth_h    = {"Authorization": f"Bearer {token}"}
+
+        # Get current roles to remove them
+        cur_resp = await client.get(
+            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
+            headers=auth_h, verify=False, timeout=10,
+        )
+        current = cur_resp.json() if cur_resp.status_code == 200 else []
+        if current:
+            await client.request(
+                "DELETE",
+                f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
+                json=current,
+                headers={**auth_h, "Content-Type": "application/json"},
+                verify=False, timeout=10,
+            )
+
+        # Assign new roles
+        if role_names:
+            all_resp = await client.get(
+                f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/roles",
+                headers=auth_h, verify=False, timeout=10,
+            )
+            all_roles  = all_resp.json() if all_resp.status_code == 200 else []
+            to_assign  = [r for r in all_roles if r["name"] in role_names]
+            if to_assign:
+                await client.post(
+                    f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
+                    json=to_assign,
+                    headers={**auth_h, "Content-Type": "application/json"},
+                    verify=False, timeout=10,
+                )
+
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/roles")
+async def list_roles():
+    try:
+        token   = await get_admin_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        resp = await client.get(
+            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/roles",
+            headers=headers, verify=False, timeout=10,
+        )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        return resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
 # HEALTH
 # ============================================================================
 

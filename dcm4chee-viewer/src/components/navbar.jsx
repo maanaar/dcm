@@ -1,44 +1,59 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
-const navItems = [
-  {
-    name: "Dashboard",
-    iconClass: "fa-solid fa-table-columns",
-    children: [
-      { name: "Hospitals Dashboard", path: "/dashboard" },
-      { name: "App Entities List", path: "/app-entities" },
-    ]
-  },
-  {
-    name: "Navigation",
-    iconClass: "fa-solid fa-compass",
-    children: [
-      { name: "Patient", path: "/patients" },
-      { name: "Studies", path: "/studies" },
-      { name: "Series", path: "/series" },
-    ]
-  },
-  {
-    name: "Configuration",
-    iconClass: "fa-solid fa-gears",
-    children: [
-      { name: "Devices", path: "/devices" },
-      { name: "AE List", path: "/ae-list" },
-      { name: "HL7 Application", path: "/hl7-application" },
-      { name: "Routing Rules", path: "/routing-roles" },
-      { name: "Transform Rules", path: "/transform-rules" },
-      { name: "Export Rules", path: "/export-rules" },
-    ]
-  },
-];
+const getNavItems = () => {
+  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  const items = [
+    {
+      name: "Dashboard",
+      iconClass: "fa-solid fa-table-columns",
+      children: [
+        { name: "Hospitals Dashboard", path: "/dashboard" },
+        { name: "App Entities List", path: "/app-entities" },
+      ]
+    },
+    {
+      name: "Navigation",
+      iconClass: "fa-solid fa-compass",
+      children: [
+        { name: "Patient", path: "/patients" },
+        { name: "Studies", path: "/studies" },
+        { name: "Series", path: "/series" },
+      ]
+    },
+    {
+      name: "Configuration",
+      iconClass: "fa-solid fa-gears",
+      children: [
+        { name: "Devices", path: "/devices" },
+        { name: "AE List", path: "/ae-list" },
+        { name: "HL7 Application", path: "/hl7-application" },
+        { name: "Routing Rules", path: "/routing-roles" },
+        { name: "Transform Rules", path: "/transform-rules" },
+        { name: "Export Rules", path: "/export-rules" },
+      ]
+    },
+  ];
+  if (isAdmin) {
+    items.push({
+      name: "Administration",
+      iconClass: "fa-solid fa-shield-halved",
+      children: [
+        { name: "Users", path: "/users" },
+      ]
+    });
+  }
+  return items;
+};
 
 export default function Navbar() {
   const navigate = useNavigate();
+  const navItems = getNavItems();
   const [expandedItems, setExpandedItems] = useState({
     "Dashboard": true,
     "Navigation": true,
-    "Configuration": true
+    "Configuration": true,
+    "Administration": true,
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -66,6 +81,7 @@ export default function Navbar() {
     localStorage.removeItem('tokenExpiry');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('isAdmin');
 
     console.log(`Logged out from ${authMode} mode`);
 

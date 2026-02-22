@@ -18,6 +18,13 @@ const HL7ApplicationPage = lazy(() => import("./pages/HL7ApplicationPage.jsx"));
 const RoutingRolesPage = lazy(() => import("./pages/RoutingRolesPage.jsx"));
 const TransformRulesPage = lazy(() => import("./pages/TransformRulesPage.jsx"));
 const ExportRulesPage = lazy(() => import("./pages/ExportRulesPage.jsx"));
+const UsersPage = lazy(() => import("./pages/UsersPage.jsx"));
+
+// Admin-only route guard
+const AdminRoute = ({ children }) => {
+  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  return isAdmin ? children : <Navigate to="/dashboard" />;
+};
 
 // Loading component
 const PageLoader = () => (
@@ -62,6 +69,9 @@ function AppContent() {
               <Route path="/routing-roles" element={<RoutingRolesPage />} />
               <Route path="/transform-rules" element={<TransformRulesPage />} />
               <Route path="/export-rules" element={<ExportRulesPage />} />
+
+              {/* Administration Routes */}
+              <Route path="/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
 
               {/* Other Routes */}
               <Route path="/mwl" element={<MWLPage />} />

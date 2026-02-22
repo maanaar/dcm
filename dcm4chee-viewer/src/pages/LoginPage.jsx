@@ -122,6 +122,21 @@ export default function LoginPage() {
           localStorage.removeItem('rememberedPassword');
         }
 
+        // Determine admin status
+        if (authMode === 'keycloak' && tokens?.accessToken) {
+          try {
+            const payload = JSON.parse(atob(tokens.accessToken.split('.')[1]));
+            const roles = payload?.realm_access?.roles || [];
+            const isAdmin = roles.some(r => r.toLowerCase().includes('admin'));
+            localStorage.setItem('isAdmin', String(isAdmin));
+          } catch {
+            localStorage.setItem('isAdmin', 'false');
+          }
+        } else {
+          // Demo mode — hardcoded account is always admin
+          localStorage.setItem('isAdmin', 'true');
+        }
+
         // Store user info
         localStorage.setItem('userEmail', email);
         localStorage.setItem('isAuthenticated', 'true');

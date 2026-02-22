@@ -698,6 +698,62 @@ export const fetchExportTasks = async () => {
 };
 
 // ============================================================================
+// USER MANAGEMENT API
+// ============================================================================
+
+export const fetchUsers = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/users`);
+    if (!response.ok) throw new Error(`Failed to fetch users: ${response.status}`);
+    return await response.json();
+  } catch (error) { console.error('❌ Error fetching users:', error); return []; }
+};
+
+export const createUser = async (data) => {
+  const response = await fetch(`${API_BASE}/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
+
+export const updateUser = async (id, data) => {
+  const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
+
+export const deleteUser = async (id) => {
+  const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
+
+export const setUserRoles = async (id, roles) => {
+  const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}/roles`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ roles }),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
+
+export const fetchRoles = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/roles`);
+    if (!response.ok) throw new Error(`Failed: ${response.status}`);
+    return await response.json();
+  } catch (error) { console.error('❌ Error fetching roles:', error); return []; }
+};
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 
