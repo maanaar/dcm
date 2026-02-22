@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   fetchExporters, createExporter,
   fetchExportRules, createExportRule, deleteExportRule,
+  fetchExportTasks,
   fetchApplicationEntities, fetchDevices,
 } from '../services/dcmchee';
 
@@ -27,8 +28,18 @@ const formatList = (val) =>
 // ── Exporters tab ────────────────────────────────────────────────────────────
 const BLANK_EXP = { deviceName: '', exporterID: '', aeTitle: '', uri: '', queueName: '', storageID: '', description: '' };
 
+const TASK_STATUSES = [
+  { key: 'SCHEDULED',  label: 'Scheduled',   color: 'bg-blue-100 text-blue-700' },
+  { key: 'IN PROCESS', label: 'In Process',  color: 'bg-yellow-100 text-yellow-700' },
+  { key: 'COMPLETED',  label: 'Completed',   color: 'bg-green-100 text-green-700' },
+  { key: 'WARNING',    label: 'Warning',     color: 'bg-orange-100 text-orange-700' },
+  { key: 'FAILED',     label: 'Failed',      color: 'bg-red-100 text-red-700' },
+  { key: 'CANCELED',   label: 'Canceled',    color: 'bg-gray-100 text-gray-500' },
+];
+
 function ExportersTab({ aeTitles, deviceNames }) {
   const [exporters,  setExporters]  = useState([]);
+  const [taskStats,  setTaskStats]  = useState(null);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState(null);
   const [search,     setSearch]     = useState('');
@@ -39,8 +50,11 @@ function ExportersTab({ aeTitles, deviceNames }) {
 
   const load = async () => {
     setLoading(true); setError(null);
-    try   { setExporters(await fetchExporters()); }
-    catch (e) { setError(e.message); }
+    try {
+      const [exps, tasks] = await Promise.all([fetchExporters(), fetchExportTasks()]);
+      setExporters(exps);
+      setTaskStats(tasks);
+    } catch (e) { setError(e.message); }
     finally   { setLoading(false); }
   };
 
@@ -67,6 +81,18 @@ function ExportersTab({ aeTitles, deviceNames }) {
 
   return (
     <div>
+      {/* Queue stats */}
+      {taskStats && (
+        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+          {TASK_STATUSES.map(({ key, label, color }) => (
+            <span key={key} className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${color}`}>
+              {label}
+              <span className="font-bold">{taskStats[key] ?? 0}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <input type="text" placeholder="Search exporters…" value={search}

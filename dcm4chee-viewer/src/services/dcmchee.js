@@ -686,6 +686,17 @@ export const createExporter = async (exporterData) => {
   }
 };
 
+export const fetchExportTasks = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/export-tasks`);
+    if (!response.ok) throw new Error(`Failed to fetch export tasks: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching export tasks:', error);
+    return { SCHEDULED: 0, 'IN PROCESS': 0, COMPLETED: 0, WARNING: 0, FAILED: 0, CANCELED: 0 };
+  }
+};
+
 // ============================================================================
 // HEALTH CHECK
 // ============================================================================

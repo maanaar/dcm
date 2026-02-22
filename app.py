@@ -1156,6 +1156,35 @@ async def delete_export_rule(rule_cn: str, deviceName: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/export-tasks")
+async def list_export_tasks():
+    """Return aggregate export task counts by status from dcm4chee monitoring API."""
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        statuses = ["SCHEDULED", "IN PROCESS", "COMPLETED", "WARNING", "FAILED", "CANCELED"]
+
+        async def get_count(status: str) -> int:
+            try:
+                resp = await client.get(
+                    f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export/count",
+                    params={"status": status},
+                    headers=headers,
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return data.get("count", 0) if isinstance(data, dict) else int(data)
+            except Exception:
+                pass
+            return 0
+
+        counts = await asyncio.gather(*[get_count(s) for s in statuses])
+        return {s: c for s, c in zip(statuses, counts)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================================
 # HEALTH
 # ============================================================================
