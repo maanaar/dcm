@@ -657,6 +657,36 @@ export const fetchArchives = async () => {
 };
 
 // ============================================================================
+// EXPORTERS API
+// ============================================================================
+
+export const fetchExporters = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/exporters`);
+    if (!response.ok) throw new Error(`Failed to fetch exporters: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching exporters:', error);
+    return [];
+  }
+};
+
+export const createExporter = async (exporterData) => {
+  try {
+    const response = await fetch(`${API_BASE}/exporters`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(exporterData),
+    });
+    if (!response.ok) throw new Error(`Failed to create exporter: ${await response.text()}`);
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error creating exporter:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 

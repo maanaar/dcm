@@ -17,6 +17,7 @@ const AEListPage = lazy(() => import("./pages/AEListPage.jsx"));
 const HL7ApplicationPage = lazy(() => import("./pages/HL7ApplicationPage.jsx"));
 const RoutingRolesPage = lazy(() => import("./pages/RoutingRolesPage.jsx"));
 const TransformRulesPage = lazy(() => import("./pages/TransformRulesPage.jsx"));
+const ExportRulesPage = lazy(() => import("./pages/ExportRulesPage.jsx"));
 
 // Loading component
 const PageLoader = () => (
@@ -60,6 +61,7 @@ function AppContent() {
               <Route path="/hl7-application" element={<HL7ApplicationPage />} />
               <Route path="/routing-roles" element={<RoutingRolesPage />} />
               <Route path="/transform-rules" element={<TransformRulesPage />} />
+              <Route path="/export-rules" element={<ExportRulesPage />} />
 
               {/* Other Routes */}
               <Route path="/mwl" element={<MWLPage />} />

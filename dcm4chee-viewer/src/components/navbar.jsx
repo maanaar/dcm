@@ -28,6 +28,7 @@ const navItems = [
       { name: "HL7 Application", path: "/hl7-application" },
       { name: "Routing Rules", path: "/routing-roles" },
       { name: "Transform Rules", path: "/transform-rules" },
+      { name: "Export Rules", path: "/export-rules" },
     ]
   },
 ];

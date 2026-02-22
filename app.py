@@ -975,6 +975,188 @@ async def debug_institutions():
 
 
 # ============================================================================
+# EXPORT RULES & EXPORTERS
+# ============================================================================
+
+async def _get_all_device_configs(token: str) -> list[tuple[str, dict]]:
+    """Return [(device_name, config), ...] for all devices."""
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+    if resp.status_code != 200:
+        return []
+    names = [d["dicomDeviceName"] if isinstance(d, dict) else d for d in (resp.json() or [])]
+    configs = await asyncio.gather(*[_get_device_config(token, n) for n in names])
+    return list(zip(names, configs))
+
+
+@app.get("/api/exporters")
+async def list_exporters():
+    try:
+        token = await get_token()
+        device_configs = await _get_all_device_configs(token)
+        result = []
+        for name, config in device_configs:
+            archive = config.get("dcmDevice", {}).get("dcmArchiveDevice", {})
+            for exp in archive.get("dcmExporter", []):
+                result.append({
+                    "deviceName":  name,
+                    "exporterID":  exp.get("dcmExporterID", ""),
+                    "aeTitle":     exp.get("dicomAETitle", ""),
+                    "uri":         exp.get("dcmURI", ""),
+                    "queueName":   exp.get("dcmQueueName", ""),
+                    "storageID":   exp.get("dcmExportStorageID", ""),
+                    "description": exp.get("dicomDescription", ""),
+                    "status":      "active",
+                })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/exporters")
+async def create_exporter(request: Request):
+    try:
+        body = await request.json()
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        device_configs = await _get_all_device_configs(token)
+        target_device = body.get("deviceName") or (device_configs[0][0] if device_configs else None)
+        if not target_device:
+            raise HTTPException(status_code=400, detail="No device available")
+
+        config = next((c for n, c in device_configs if n == target_device), {})
+        archive = config.setdefault("dcmDevice", {}).setdefault("dcmArchiveDevice", {})
+        exporters = archive.setdefault("dcmExporter", [])
+
+        new_exp: Dict = {
+            "dcmExporterID": body.get("exporterID", ""),
+            "dicomAETitle":  body.get("aeTitle", ""),
+            "dcmURI":        body.get("uri", ""),
+            "dcmQueueName":  body.get("queueName", "Export1"),
+        }
+        if body.get("storageID"):   new_exp["dcmExportStorageID"] = body["storageID"]
+        if body.get("description"): new_exp["dicomDescription"]   = body["description"]
+        exporters.append(new_exp)
+
+        put = await client.put(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{target_device}",
+            json=config, headers={**headers, "Content-Type": "application/json"},
+        )
+        if put.status_code not in (200, 204):
+            raise HTTPException(status_code=put.status_code, detail=put.text)
+        return {"success": True, "exporterID": new_exp["dcmExporterID"], "device": target_device}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export-rules")
+async def list_export_rules():
+    try:
+        token = await get_token()
+        device_configs = await _get_all_device_configs(token)
+        result = []
+        for name, config in device_configs:
+            archive = config.get("dcmDevice", {}).get("dcmArchiveDevice", {})
+            for rule in archive.get("dcmExportRule", []):
+                result.append({
+                    "cn":          rule.get("cn", ""),
+                    "description": rule.get("dicomDescription", ""),
+                    "deviceName":  name,
+                    "exporterID":  rule.get("dcmExporterID", []),
+                    "entity":      rule.get("dcmEntity", ""),
+                    "property":    rule.get("dcmProperty", []),
+                    "schedule":    rule.get("dcmSchedule", []),
+                    "priority":    rule.get("dcmRulePriority", 0),
+                    "status":      "active",
+                })
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/export-rules")
+async def create_export_rule_endpoint(request: Request):
+    try:
+        body = await request.json()
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        device_configs = await _get_all_device_configs(token)
+        target_device = body.get("deviceName") or (device_configs[0][0] if device_configs else None)
+        if not target_device:
+            raise HTTPException(status_code=400, detail="No device available")
+
+        config = next((c for n, c in device_configs if n == target_device), {})
+        archive = config.setdefault("dcmDevice", {}).setdefault("dcmArchiveDevice", {})
+        rules = archive.setdefault("dcmExportRule", [])
+
+        rule_cn = body.get("cn") or f"export-rule-{len(rules) + 1}"
+        new_rule: Dict = {"cn": rule_cn}
+        if body.get("description"): new_rule["dicomDescription"] = body["description"]
+        if body.get("entity"):      new_rule["dcmEntity"]        = body["entity"]
+
+        exp_ids = [s.strip() for s in body.get("exporterID", "").split(",") if s.strip()]
+        if exp_ids: new_rule["dcmExporterID"] = exp_ids
+
+        props = [s.strip() for s in body.get("property", "").split(",") if s.strip()]
+        if props: new_rule["dcmProperty"] = props
+
+        try:
+            if body.get("priority") not in (None, ""):
+                new_rule["dcmRulePriority"] = int(body["priority"])
+        except (ValueError, TypeError):
+            pass
+
+        rules.append(new_rule)
+
+        put = await client.put(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{target_device}",
+            json=config, headers={**headers, "Content-Type": "application/json"},
+        )
+        if put.status_code not in (200, 204):
+            raise HTTPException(status_code=put.status_code, detail=put.text)
+        return {"success": True, "cn": rule_cn, "device": target_device}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/export-rules/{rule_cn}")
+async def delete_export_rule(rule_cn: str, deviceName: Optional[str] = None):
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        device_configs = await _get_all_device_configs(token)
+
+        for name, config in device_configs:
+            if deviceName and name != deviceName:
+                continue
+            archive = config.get("dcmDevice", {}).get("dcmArchiveDevice", {})
+            rules = archive.get("dcmExportRule", [])
+            new_rules = [r for r in rules if r.get("cn") != rule_cn]
+            if len(new_rules) == len(rules):
+                continue
+            archive["dcmExportRule"] = new_rules
+            put = await client.put(
+                f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{name}",
+                json=config, headers={**headers, "Content-Type": "application/json"},
+            )
+            if put.status_code not in (200, 204):
+                raise HTTPException(status_code=put.status_code, detail=put.text)
+            return {"success": True, "cn": rule_cn, "device": name}
+
+        raise HTTPException(status_code=404, detail=f"Export rule '{rule_cn}' not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
 # HEALTH
 # ============================================================================
 

@@ -5,6 +5,13 @@ const BLANK = {
   cn: '', description: '', deviceName: '', localAETitle: '', sourceAETitle: '', destAETitle: '', queueName: '', bind: '', priority: '',
 };
 
+const statusBadge = (status) => {
+  const s = (status || 'active').toLowerCase();
+  if (s === 'active')   return 'px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium';
+  if (s === 'disabled') return 'px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-medium';
+  return 'px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium';
+};
+
 const inp =
   'w-full px-2 py-1 border border-gray-300 rounded-lg text-xs outline-none ' +
   'focus:ring-1 focus:ring-[#0a6e79] focus:border-[#0a6e79] bg-white placeholder-gray-400';
@@ -228,7 +235,7 @@ export default function RoutingRolesPage() {
                         </td>
                         <td className="px-4 py-3 text-gray-600">{rule.priority ?? '—'}</td>
                         <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Active</span>
+                          <span className={statusBadge(rule.status)}>{rule.status || 'active'}</span>
                         </td>
                       </tr>
                     ))}
@@ -313,7 +320,7 @@ export default function RoutingRolesPage() {
                   <div key={idx} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                     <div className="flex justify-between items-center mb-3">
                       <span className="font-semibold text-[#0a6e79] text-sm">{rule.cn || `Rule #${idx + 1}`}</span>
-                      <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Active</span>
+                      <span className={statusBadge(rule.status)}>{rule.status || 'active'}</span>
                     </div>
                     <div className="space-y-2 text-sm">
                       <div>
