@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchPatients, fetchWebApps } from '../services/dcmchee';
 
@@ -23,11 +23,7 @@ export default function PatientSearch() {
   const [error, setError] = useState(null);
   const [applicationEntities, setApplicationEntities] = useState([]);
 
-  useEffect(() => {
-    loadApplicationEntities();
-  }, []);
-
-  const loadApplicationEntities = async () => {
+  const loadApplicationEntities = useCallback(async () => {
     try {
       const webapps = await fetchWebApps();
       setApplicationEntities(Array.isArray(webapps) ? webapps : []);
@@ -39,17 +35,21 @@ export default function PatientSearch() {
       console.error('Error loading web apps:', err);
       setApplicationEntities([]);
     }
-  };
+  }, []);
 
-  const handleInputChange = (e) => {
+  useEffect(() => {
+    loadApplicationEntities();
+  }, [loadApplicationEntities]);
+
+  const handleInputChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-  };
+  }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     setIsSearching(true);
     setError(null);
@@ -68,12 +68,20 @@ export default function PatientSearch() {
     } finally {
       setIsSearching(false);
     }
-  };
+  }, [formData]);
 
-  const handleClearSearch = () => {
+  const handleClearSearch = useCallback(() => {
     setSearchResults([]);
     setError(null);
-  };
+  }, []);
+
+  const appEntityOptions = useMemo(
+    () => applicationEntities.map((app, idx) => {
+      const name = typeof app === 'string' ? app : app.dcmWebAppName;
+      return <option key={idx} value={name}>{name}</option>;
+    }),
+    [applicationEntities]
+  );
 
   return ( 
     <div className=" wallpaper-page w-full bg-white/50  rounded-2xl  backdrop-blur-md border shadow" >
@@ -176,10 +184,7 @@ export default function PatientSearch() {
                 onChange={handleInputChange}
                 className="w-full px-4 py-2 border rounded-2xl outline-none focus:ring-2 focus:ring-[#00768317]-500 bg-[#00768317] text-gray-800"
               >
-                {applicationEntities.map((app, idx) => {
-                  const name = typeof app === 'string' ? app : app.dcmWebAppName;
-                  return <option key={idx} value={name}>{name}</option>;
-                })}
+                {appEntityOptions}
               </select>
             </div>
           </div>

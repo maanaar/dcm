@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { hasPermission } from "../config/permissions";
 
 const getNavItems = () => {
@@ -65,22 +65,22 @@ export default function Navbar() {
   });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const toggleExpand = (itemName) => {
+  const toggleExpand = useCallback((itemName) => {
     setExpandedItems(prev => ({
       ...prev,
       [itemName]: !prev[itemName]
     }));
-  };
+  }, []);
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
+  const toggleMobileMenu = useCallback(() => {
+    setIsMobileMenuOpen(prev => !prev);
+  }, []);
 
-  const closeMobileMenu = () => {
+  const closeMobileMenu = useCallback(() => {
     setIsMobileMenuOpen(false);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     const authMode = localStorage.getItem('authMode');
 
     // Clear all authentication data
@@ -97,7 +97,7 @@ export default function Navbar() {
     // Navigate to login page
     navigate('/login');
     closeMobileMenu();
-  };
+  }, [navigate, closeMobileMenu]);
 
   const getUserEmail = () => {
     return localStorage.getItem('userEmail') || 'User';

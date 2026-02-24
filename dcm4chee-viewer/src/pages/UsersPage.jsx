@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchUsers, createUser, updateUser, deleteUser, setUserPermissions } from '../services/dcmchee';
 import { APP_PERMISSIONS, ALL_PERMISSION_IDS } from '../config/permissions';
 
@@ -63,17 +63,17 @@ export default function UsersPage() {
   const [pendingPerms, setPendingPerms] = useState([]);
   const [permsSaving,  setPermsSaving]  = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true); setError(null);
     try { setUsers(await fetchUsers()); }
     catch (e) { setError(e.message); }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   // ── toggle enabled ──────────────────────────────────────────────────────────
-  const handleToggleEnabled = async (user) => {
+  const handleToggleEnabled = useCallback(async (user) => {
     const next = !user.enabled;
     setUsers(prev => prev.map(u => u.id === user.id ? { ...u, enabled: next } : u));
     try { await updateUser(user.id, { enabled: next }); }
@@ -81,19 +81,19 @@ export default function UsersPage() {
       setUsers(prev => prev.map(u => u.id === user.id ? { ...u, enabled: user.enabled } : u));
       alert(`Failed to update: ${e.message}`);
     }
-  };
+  }, []);
 
   // ── delete ──────────────────────────────────────────────────────────────────
-  const handleDelete = async (user) => {
+  const handleDelete = useCallback(async (user) => {
     if (!window.confirm(`Delete user "${user.username}"? This cannot be undone.`)) return;
     try {
       await deleteUser(user.id);
       setUsers(prev => prev.filter(u => u.id !== user.id));
     } catch (e) { alert(`Delete failed: ${e.message}`); }
-  };
+  }, []);
 
   // ── create ──────────────────────────────────────────────────────────────────
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!newUser.username.trim()) { setSaveError('Username is required.'); return; }
     setSaving(true); setSaveError(null);
     try {
@@ -103,15 +103,15 @@ export default function UsersPage() {
       setNewUser(BLANK);
     } catch (e) { setSaveError(e.message); }
     finally { setSaving(false); }
-  };
+  }, [newUser, load]);
 
   // ── permission editor ───────────────────────────────────────────────────────
-  const openPermEditor = (user) => {
+  const openPermEditor = useCallback((user) => {
     setEditingPerms(user.id);
     setPendingPerms(user.permissions || []);
-  };
+  }, []);
 
-  const handleSavePerms = async (userId) => {
+  const handleSavePerms = useCallback(async (userId) => {
     setPermsSaving(true);
     try {
       await setUserPermissions(userId, pendingPerms);
@@ -119,10 +119,10 @@ export default function UsersPage() {
       setEditingPerms(null);
     } catch (e) { alert(`Failed to update permissions: ${e.message}`); }
     finally { setPermsSaving(false); }
-  };
+  }, [pendingPerms]);
 
   // ── filter ──────────────────────────────────────────────────────────────────
-  const filtered = users.filter(u => {
+  const filtered = useMemo(() => users.filter(u => {
     const s = search.toLowerCase();
     return (
       (u.username  || '').toLowerCase().includes(s) ||
@@ -130,7 +130,7 @@ export default function UsersPage() {
       (u.firstName || '').toLowerCase().includes(s) ||
       (u.lastName  || '').toLowerCase().includes(s)
     );
-  });
+  }), [users, search]);
 
   const showTable = !loading && (filtered.length > 0 || adding);
 

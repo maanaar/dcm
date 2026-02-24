@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchDashboardStats, fetchHospitals } from '../services/dcmchee';
 
@@ -78,16 +78,28 @@ export default function DashboardPage() {
   }, []);
 
   // ── Filter logic ──────────────────────────────────────────────────────────
-  const filtered = hospitals.filter(h =>
-    (h.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+  const filtered = useMemo(
+    () => hospitals.filter(h => (h.name || '').toLowerCase().includes(searchTerm.toLowerCase())),
+    [hospitals, searchTerm]
   );
 
-  const visibleHospitals = showAll ? filtered : filtered.slice(0, DEFAULT_VISIBLE);
-  const hiddenCount      = filtered.length - DEFAULT_VISIBLE;
+  const visibleHospitals = useMemo(
+    () => showAll ? filtered : filtered.slice(0, DEFAULT_VISIBLE),
+    [filtered, showAll]
+  );
+
+  const hiddenCount = filtered.length - DEFAULT_VISIBLE;
 
   // ── Compute totals from hospitals list for the KPI row ────────────────────
-  const totalPatientsFromHospitals = hospitals.reduce((s, h) => s + (h.patientCount || 0), 0);
-  const totalStudiesFromHospitals  = hospitals.reduce((s, h) => s + (h.studyCount  || 0), 0);
+  const totalPatientsFromHospitals = useMemo(
+    () => hospitals.reduce((s, h) => s + (h.patientCount || 0), 0),
+    [hospitals]
+  );
+
+  const totalStudiesFromHospitals = useMemo(
+    () => hospitals.reduce((s, h) => s + (h.studyCount || 0), 0),
+    [hospitals]
+  );
 
   return (
     <div className="min-h-screen p-6">
