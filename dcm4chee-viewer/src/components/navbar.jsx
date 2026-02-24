@@ -1,49 +1,57 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { hasPermission } from "../config/permissions";
 
 const getNavItems = () => {
   const isAdmin = localStorage.getItem('isAdmin') === 'true';
-  const items = [
+
+  const allItems = [
     {
       name: "Dashboard",
       iconClass: "fa-solid fa-table-columns",
       children: [
-        { name: "Hospitals Dashboard", path: "/dashboard" },
-        { name: "App Entities List", path: "/app-entities" },
+        { name: "Hospitals Dashboard", path: "/dashboard",   permId: "dashboard" },
       ]
     },
     {
       name: "Navigation",
       iconClass: "fa-solid fa-compass",
       children: [
-        { name: "Patient", path: "/patients" },
-        { name: "Studies", path: "/studies" },
-        { name: "Series", path: "/series" },
+        { name: "Patient",  path: "/patients", permId: "patients" },
+        { name: "Studies",  path: "/studies",  permId: "studies"  },
       ]
     },
     {
       name: "Configuration",
       iconClass: "fa-solid fa-gears",
       children: [
-        { name: "Devices", path: "/devices" },
-        { name: "AE List", path: "/ae-list" },
-        { name: "HL7 Application", path: "/hl7-application" },
-        { name: "Routing Rules", path: "/routing-roles" },
-        { name: "Transform Rules", path: "/transform-rules" },
-        { name: "Export Rules", path: "/export-rules" },
+        { name: "Devices",                    path: "/devices",          permId: "devices"          },
+        { name: "Application Entities (AE)",  path: "/app-entities",     permId: "app-entities"     },
+        { name: "HL7 Application",            path: "/hl7-application",  permId: "hl7-application"  },
+        { name: "Routing Rules",              path: "/routing-roles",    permId: "routing-rules"    },
+        { name: "Transform Rules",            path: "/transform-rules",  permId: "transform-rules"  },
+        { name: "Export Rules",               path: "/export-rules",     permId: "export-rules"     },
       ]
     },
   ];
+
   if (isAdmin) {
-    items.push({
+    allItems.push({
       name: "Administration",
       iconClass: "fa-solid fa-shield-halved",
       children: [
-        { name: "Users", path: "/users" },
+        { name: "Users", path: "/users", permId: null }, // admin-only, no extra check needed
       ]
     });
   }
-  return items;
+
+  // Filter each section's children by permission (admins pass all checks)
+  return allItems
+    .map(section => ({
+      ...section,
+      children: section.children.filter(c => c.permId === null || hasPermission(c.permId)),
+    }))
+    .filter(section => section.children.length > 0);
 };
 
 export default function Navbar() {
@@ -82,6 +90,7 @@ export default function Navbar() {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('isAuthenticated');
     localStorage.removeItem('isAdmin');
+    localStorage.removeItem('userPermissions');
 
     console.log(`Logged out from ${authMode} mode`);
 
@@ -96,7 +105,9 @@ export default function Navbar() {
 
   const getAuthMode = () => {
     const mode = localStorage.getItem('authMode');
-    return mode === 'keycloak' ? 'Keycloak' : 'Demo';
+    if (mode === 'keycloak')  return 'Keycloak';
+    if (mode === 'curalink')  return 'Curalink';
+    return 'Demo';
   };
 
   return (

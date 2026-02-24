@@ -1,17 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Background from "../components/background.jsx";
-
-// Dummy account credentials (fallback)
-const DUMMY_ACCOUNT = {
-  email: 'admin@hospital.com',
-  password: 'admin123'
-};
-
-// Keycloak configuration
-const KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL || 'https://172.16.16.221:8843';
-const KEYCLOAK_REALM = 'dcm4che';
-const KEYCLOAK_CLIENT_ID = 'dcm4chee-arc-ui';
+import { ALL_PERMISSION_IDS } from '../config/permissions';
+import { loginUser } from '../services/dcmchee';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -19,58 +10,17 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [authMode, setAuthMode] = useState('static'); // 'keycloak' or 'static'
   const navigate = useNavigate();
 
-  // Check for saved credentials on component mount
   useEffect(() => {
     const savedEmail = localStorage.getItem('rememberedEmail');
     const savedPassword = localStorage.getItem('rememberedPassword');
-    const savedAuthMode = localStorage.getItem('authMode') || 'static';
-    
     if (savedEmail && savedPassword) {
       setEmail(savedEmail);
       setPassword(savedPassword);
       setRememberMe(true);
     }
-    setAuthMode(savedAuthMode);
   }, []);
-
-  // // Keycloak authentication
-  // const authenticateWithKeycloak = async (username, password) => {
-  //   try {
-  //     const tokenUrl = `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`;
-      
-  //     const formData = new URLSearchParams();
-  //     formData.append('grant_type', 'password');
-  //     formData.append('client_id', KEYCLOAK_CLIENT_ID);
-  //     formData.append('username', username);
-  //     formData.append('password', password);
-
-  //     const response = await fetch(tokenUrl, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/x-www-form-urlencoded',
-  //       },
-  //       body: formData.toString(),
-  //     });
-
-  //     if (!response.ok) {
-  //       const errorData = await response.json().catch(() => ({}));
-  //       throw new Error(errorData.error_description || 'Authentication failed');
-  //     }
-
-  //     const data = await response.json();
-  //     return {
-  //       accessToken: data.access_token,
-  //       refreshToken: data.refresh_token,
-  //       expiresIn: data.expires_in,
-  //     };
-  //   } catch (error) {
-  //     console.error('Keycloak authentication error:', error);
-  //     throw error;
-  //   }
-  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -78,78 +28,27 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      let authSuccess = false;
-      let tokens = null;
+      const { user } = await loginUser(email, password);
 
-      if (authMode === 'keycloak') {
-        // Try Keycloak authentication first
-        try {
-          tokens = await authenticateWithKeycloak(email, password);
-          authSuccess = true;
-          
-          // Store Keycloak tokens
-          localStorage.setItem('authToken', tokens.accessToken);
-          localStorage.setItem('refreshToken', tokens.refreshToken);
-          localStorage.setItem('tokenExpiry', Date.now() + (tokens.expiresIn * 1000));
-          localStorage.setItem('authMode', 'keycloak');
-          
-        } catch (keycloakError) {
-          console.error('Keycloak auth failed:', keycloakError);
-          setError('Keycloak authentication failed. ' + keycloakError.message);
-          setIsLoading(false);
-          return;
-        }
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+        localStorage.setItem('rememberedPassword', password);
       } else {
-        // Static authentication
-        if (email === DUMMY_ACCOUNT.email && password === DUMMY_ACCOUNT.password) {
-          authSuccess = true;
-          localStorage.setItem('authToken', 'dummy-auth-token-12345');
-          localStorage.setItem('authMode', 'static');
-        } else {
-          setError('Invalid username or password. Please try again.');
-          setIsLoading(false);
-          return;
-        }
+        localStorage.removeItem('rememberedEmail');
+        localStorage.removeItem('rememberedPassword');
       }
 
-      if (authSuccess) {
-        // Handle "Remember Me"
-        if (rememberMe) {
-          localStorage.setItem('rememberedEmail', email);
-          localStorage.setItem('rememberedPassword', password);
-        } else {
-          localStorage.removeItem('rememberedEmail');
-          localStorage.removeItem('rememberedPassword');
-        }
+      localStorage.setItem('authToken', user.id);
+      localStorage.setItem('authMode', 'curalink');
+      localStorage.setItem('userEmail', user.username);
+      localStorage.setItem('isAdmin', String(user.isAdmin));
+      localStorage.setItem('userPermissions', JSON.stringify(user.isAdmin ? ALL_PERMISSION_IDS : user.permissions));
+      localStorage.setItem('isAuthenticated', 'true');
 
-        // Determine admin status
-        if (authMode === 'keycloak' && tokens?.accessToken) {
-          try {
-            const payload = JSON.parse(atob(tokens.accessToken.split('.')[1]));
-            const roles = payload?.realm_access?.roles || [];
-            const isAdmin = roles.some(r => r.toLowerCase().includes('admin'));
-            localStorage.setItem('isAdmin', String(isAdmin));
-          } catch {
-            localStorage.setItem('isAdmin', 'false');
-          }
-        } else {
-          // Demo mode — hardcoded account is always admin
-          localStorage.setItem('isAdmin', 'true');
-        }
-
-        // Store user info
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('isAuthenticated', 'true');
-
-        // Simulate slight delay for UX
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Login successful - redirect to patients page
-        navigate('/dashboard');
-      }
+      await new Promise(resolve => setTimeout(resolve, 300));
+      navigate('/dashboard');
     } catch (err) {
-      console.error('Login error:', err);
-      setError('An error occurred. Please try again.');
+      setError(err.message || 'An error occurred. Please try again.');
       setIsLoading(false);
     }
   };

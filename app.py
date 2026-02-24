@@ -5,6 +5,10 @@ import httpx
 import os
 import time
 import asyncio
+import sqlite3
+import uuid
+import hashlib
+import json
 from typing import Optional, Dict, List
 from urllib.parse import parse_qs, urlencode
 
@@ -1186,46 +1190,113 @@ async def list_export_tasks():
 
 
 # ============================================================================
-# USER MANAGEMENT  (Keycloak Admin REST API)
+# USER MANAGEMENT  (Curalink internal SQLite database)
 # ============================================================================
 
-KEYCLOAK_REALM = os.getenv("KEYCLOAK_REALM", "dcm4che")
+DB_PATH = os.getenv("CURALINK_DB_PATH", "curalink_users.db")
 
-async def get_admin_token() -> str:
-    """Get a Keycloak master-realm admin token for the Admin REST API."""
-    url = f"{KEYCLOAK_URL}/realms/master/protocol/openid-connect/token"
-    data = {
-        "grant_type": "password",
-        "client_id":  "admin-cli",
-        "username":   USERNAME,
-        "password":   PASSWORD,
+_ALL_PERM_IDS = [
+    "dashboard", "patients", "studies", "devices",
+    "app-entities", "hl7-application", "routing-rules", "transform-rules", "export-rules",
+]
+
+
+def _hash_pw(pw: str) -> str:
+    return hashlib.sha256(pw.encode()).hexdigest()
+
+
+def _row_to_user(row: tuple) -> dict:
+    uid, username, email, first_name, last_name, _, is_admin, enabled, permissions = row
+    return {
+        "id":          uid,
+        "username":    username,
+        "email":       email,
+        "firstName":   first_name,
+        "lastName":    last_name,
+        "isAdmin":     bool(is_admin),
+        "enabled":     bool(enabled),
+        "permissions": json.loads(permissions or "[]"),
     }
-    resp = await client.post(url, data=data, verify=False, timeout=15)
-    resp.raise_for_status()
-    return resp.json()["access_token"]
+
+
+def _init_db() -> None:
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS curalink_users (
+            id            TEXT PRIMARY KEY,
+            username      TEXT UNIQUE NOT NULL,
+            email         TEXT DEFAULT '',
+            first_name    TEXT DEFAULT '',
+            last_name     TEXT DEFAULT '',
+            password_hash TEXT NOT NULL,
+            is_admin      INTEGER DEFAULT 0,
+            enabled       INTEGER DEFAULT 1,
+            permissions   TEXT DEFAULT '[]'
+        )
+    """)
+    # Seed a default admin account if the table is empty
+    c.execute("SELECT COUNT(*) FROM curalink_users")
+    if c.fetchone()[0] == 0:
+        c.execute(
+            "INSERT INTO curalink_users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (str(uuid.uuid4()), "admin", "admin@hospital.com", "Admin", "User",
+             _hash_pw("admin123"), 1, 1, json.dumps(_ALL_PERM_IDS))
+        )
+    conn.commit()
+    conn.close()
+
+
+_init_db()
+
+
+@app.post("/api/auth/login")
+async def curalink_login(request: Request):
+    """Authenticate a Curalink user and return their profile + permissions."""
+    try:
+        body     = await request.json()
+        username = body.get("username", "").strip()
+        password = body.get("password", "")
+        if not username or not password:
+            raise HTTPException(status_code=400, detail="Username and password required")
+        conn = sqlite3.connect(DB_PATH)
+        c    = conn.cursor()
+        c.execute("SELECT * FROM curalink_users WHERE username = ? AND enabled = 1", (username,))
+        row = c.fetchone()
+        conn.close()
+        if not row or row[5] != _hash_pw(password):
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        return {"success": True, "user": _row_to_user(row)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/users")
 async def list_users():
     try:
-        token = await get_admin_token()
-        headers = {"Authorization": f"Bearer {token}"}
-        resp = await client.get(
-            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users?max=200",
-            headers=headers, verify=False, timeout=15,
-        )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
-        users = resp.json()
-        # Fetch roles for each user in parallel
-        async def with_roles(u):
-            r = await client.get(
-                f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{u['id']}/role-mappings/realm",
-                headers=headers, verify=False, timeout=10,
-            )
-            u["roles"] = [role["name"] for role in (r.json() if r.status_code == 200 else [])]
-            return u
-        return await asyncio.gather(*[with_roles(u) for u in users])
+        conn = sqlite3.connect(DB_PATH)
+        c    = conn.cursor()
+        c.execute("SELECT * FROM curalink_users ORDER BY username")
+        rows = c.fetchall()
+        conn.close()
+        return [_row_to_user(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/users/{user_id}")
+async def get_user(user_id: str):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c    = conn.cursor()
+        c.execute("SELECT * FROM curalink_users WHERE id = ?", (user_id,))
+        row  = c.fetchone()
+        conn.close()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+        return _row_to_user(row)
     except HTTPException:
         raise
     except Exception as e:
@@ -1235,48 +1306,33 @@ async def list_users():
 @app.post("/api/users")
 async def create_user(request: Request):
     try:
-        body   = await request.json()
-        token  = await get_admin_token()
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-        payload: Dict = {
-            "username":  body.get("username", ""),
-            "email":     body.get("email", ""),
-            "firstName": body.get("firstName", ""),
-            "lastName":  body.get("lastName", ""),
-            "enabled":   body.get("enabled", True),
-        }
-        if body.get("password"):
-            payload["credentials"] = [{"type": "password", "value": body["password"], "temporary": False}]
-
-        resp = await client.post(
-            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users",
-            json=payload, headers=headers, verify=False, timeout=15,
-        )
-        if resp.status_code not in (200, 201):
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
-
-        # Retrieve the new user's ID from Location header
-        location = resp.headers.get("location", "")
-        user_id  = location.rstrip("/").split("/")[-1] if location else None
-
-        # Assign roles if any
-        role_names: list = body.get("roles", [])
-        if role_names and user_id:
-            roles_resp = await client.get(
-                f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/roles",
-                headers={"Authorization": f"Bearer {token}"}, verify=False, timeout=10,
+        body     = await request.json()
+        username = body.get("username", "").strip()
+        password = body.get("password", "")
+        if not username:
+            raise HTTPException(status_code=400, detail="Username is required")
+        if not password:
+            raise HTTPException(status_code=400, detail="Password is required")
+        user_id = str(uuid.uuid4())
+        conn    = sqlite3.connect(DB_PATH)
+        c       = conn.cursor()
+        try:
+            c.execute(
+                "INSERT INTO curalink_users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (user_id, username,
+                 body.get("email", ""),
+                 body.get("firstName", ""),
+                 body.get("lastName", ""),
+                 _hash_pw(password),
+                 1 if body.get("isAdmin") else 0,
+                 1 if body.get("enabled", True) else 0,
+                 json.dumps(body.get("permissions", [])))
             )
-            all_roles = roles_resp.json() if roles_resp.status_code == 200 else []
-            to_assign  = [r for r in all_roles if r["name"] in role_names]
-            if to_assign:
-                await client.post(
-                    f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
-                    json=to_assign,
-                    headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                    verify=False, timeout=10,
-                )
-
+            conn.commit()
+        except sqlite3.IntegrityError:
+            raise HTTPException(status_code=409, detail=f"Username '{username}' already exists")
+        finally:
+            conn.close()
         return {"success": True, "id": user_id}
     except HTTPException:
         raise
@@ -1287,19 +1343,28 @@ async def create_user(request: Request):
 @app.put("/api/users/{user_id}")
 async def update_user(user_id: str, request: Request):
     try:
-        body    = await request.json()
-        token   = await get_admin_token()
-        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        payload: Dict = {}
-        for field in ("email", "firstName", "lastName", "enabled"):
-            if field in body:
-                payload[field] = body[field]
-        resp = await client.put(
-            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}",
-            json=payload, headers=headers, verify=False, timeout=15,
-        )
-        if resp.status_code not in (200, 204):
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        body  = await request.json()
+        conn  = sqlite3.connect(DB_PATH)
+        c     = conn.cursor()
+        c.execute("SELECT id FROM curalink_users WHERE id = ?", (user_id,))
+        if not c.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail="User not found")
+        fields: List[str] = []
+        values: list      = []
+        if "email"       in body: fields.append("email = ?");        values.append(body["email"])
+        if "firstName"   in body: fields.append("first_name = ?");   values.append(body["firstName"])
+        if "lastName"    in body: fields.append("last_name = ?");    values.append(body["lastName"])
+        if "enabled"     in body: fields.append("enabled = ?");      values.append(1 if body["enabled"] else 0)
+        if "isAdmin"     in body: fields.append("is_admin = ?");     values.append(1 if body["isAdmin"] else 0)
+        if "permissions" in body: fields.append("permissions = ?");  values.append(json.dumps(body["permissions"]))
+        if "password"    in body and body["password"]:
+            fields.append("password_hash = ?"); values.append(_hash_pw(body["password"]))
+        if fields:
+            values.append(user_id)
+            c.execute(f"UPDATE curalink_users SET {', '.join(fields)} WHERE id = ?", values)
+            conn.commit()
+        conn.close()
         return {"success": True}
     except HTTPException:
         raise
@@ -1310,14 +1375,14 @@ async def update_user(user_id: str, request: Request):
 @app.delete("/api/users/{user_id}")
 async def delete_user(user_id: str):
     try:
-        token   = await get_admin_token()
-        headers = {"Authorization": f"Bearer {token}"}
-        resp = await client.delete(
-            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}",
-            headers=headers, verify=False, timeout=15,
-        )
-        if resp.status_code not in (200, 204):
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+        conn = sqlite3.connect(DB_PATH)
+        c    = conn.cursor()
+        c.execute("DELETE FROM curalink_users WHERE id = ?", (user_id,))
+        if c.rowcount == 0:
+            conn.close()
+            raise HTTPException(status_code=404, detail="User not found")
+        conn.commit()
+        conn.close()
         return {"success": True}
     except HTTPException:
         raise
@@ -1325,87 +1390,9 @@ async def delete_user(user_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/users/{user_id}/roles")
-async def get_user_roles(user_id: str):
-    try:
-        token   = await get_admin_token()
-        headers = {"Authorization": f"Bearer {token}"}
-        resp = await client.get(
-            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
-            headers=headers, verify=False, timeout=10,
-        )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
-        return resp.json()
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.put("/api/users/{user_id}/roles")
-async def set_user_roles(user_id: str, request: Request):
-    """Replace all realm roles for a user."""
-    try:
-        body      = await request.json()
-        role_names: list = body.get("roles", [])
-        token     = await get_admin_token()
-        auth_h    = {"Authorization": f"Bearer {token}"}
-
-        # Get current roles to remove them
-        cur_resp = await client.get(
-            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
-            headers=auth_h, verify=False, timeout=10,
-        )
-        current = cur_resp.json() if cur_resp.status_code == 200 else []
-        if current:
-            await client.request(
-                "DELETE",
-                f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
-                json=current,
-                headers={**auth_h, "Content-Type": "application/json"},
-                verify=False, timeout=10,
-            )
-
-        # Assign new roles
-        if role_names:
-            all_resp = await client.get(
-                f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/roles",
-                headers=auth_h, verify=False, timeout=10,
-            )
-            all_roles  = all_resp.json() if all_resp.status_code == 200 else []
-            to_assign  = [r for r in all_roles if r["name"] in role_names]
-            if to_assign:
-                await client.post(
-                    f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/users/{user_id}/role-mappings/realm",
-                    json=to_assign,
-                    headers={**auth_h, "Content-Type": "application/json"},
-                    verify=False, timeout=10,
-                )
-
-        return {"success": True}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/roles")
+@app.get("/api/roles")  # kept for backwards compat
 async def list_roles():
-    try:
-        token   = await get_admin_token()
-        headers = {"Authorization": f"Bearer {token}"}
-        resp = await client.get(
-            f"{KEYCLOAK_URL}/admin/realms/{KEYCLOAK_REALM}/roles",
-            headers=headers, verify=False, timeout=10,
-        )
-        if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail=resp.text)
-        return resp.json()
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return []
 
 
 # ============================================================================

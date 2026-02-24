@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 import { lazy, Suspense } from "react";
 import Navbar from "./components/navbar.jsx";
 import Background from "./components/background.jsx";
+import { hasPermission } from "./config/permissions.js";
 
 // Lazy load all pages
 const MWLPage = lazy(() => import("./pages/mwl.jsx"));
@@ -19,6 +20,12 @@ const RoutingRolesPage = lazy(() => import("./pages/RoutingRolesPage.jsx"));
 const TransformRulesPage = lazy(() => import("./pages/TransformRulesPage.jsx"));
 const ExportRulesPage = lazy(() => import("./pages/ExportRulesPage.jsx"));
 const UsersPage = lazy(() => import("./pages/UsersPage.jsx"));
+
+// Permission-based route guard
+const PermRoute = ({ permId, children }) => {
+  if (!localStorage.getItem('isAuthenticated')) return <Navigate to="/login" />;
+  return hasPermission(permId) ? children : <Navigate to="/dashboard" />;
+};
 
 // Admin-only route guard
 const AdminRoute = ({ children }) => {
@@ -53,22 +60,22 @@ function AppContent() {
               <Route path="/login" element={<LoginPage />} />
 
               {/* Dashboard Routes */}
-              <Route path="/dashboard" element={<DashboardPage/>} />
-              <Route path="/hospital/:id" element={<SingleHospitalPage />} />
-              <Route path="/app-entities" element={<AppEntitiesList />} />
+              <Route path="/dashboard" element={<PermRoute permId="dashboard"><DashboardPage /></PermRoute>} />
+              <Route path="/hospital/:id" element={<PermRoute permId="dashboard"><SingleHospitalPage /></PermRoute>} />
+              <Route path="/app-entities" element={<PermRoute permId="app-entities"><AppEntitiesList /></PermRoute>} />
 
               {/* Navigation Routes */}
-              <Route path="/patients" element={<PatientsPage />} />
-              <Route path="/studies" element={<StudiesPage />} />
+              <Route path="/patients" element={<PermRoute permId="patients"><PatientsPage /></PermRoute>} />
+              <Route path="/studies" element={<PermRoute permId="studies"><StudiesPage /></PermRoute>} />
               <Route path="/series" element={<SeriesPage />} />
 
               {/* Configuration Routes */}
-              <Route path="/devices" element={<DevicesPage />} />
-              <Route path="/ae-list" element={<AEListPage />} />
-              <Route path="/hl7-application" element={<HL7ApplicationPage />} />
-              <Route path="/routing-roles" element={<RoutingRolesPage />} />
-              <Route path="/transform-rules" element={<TransformRulesPage />} />
-              <Route path="/export-rules" element={<ExportRulesPage />} />
+              <Route path="/devices" element={<PermRoute permId="devices"><DevicesPage /></PermRoute>} />
+              <Route path="/ae-list" element={<PermRoute permId="app-entities"><AEListPage /></PermRoute>} />
+              <Route path="/hl7-application" element={<PermRoute permId="hl7-application"><HL7ApplicationPage /></PermRoute>} />
+              <Route path="/routing-roles" element={<PermRoute permId="routing-rules"><RoutingRolesPage /></PermRoute>} />
+              <Route path="/transform-rules" element={<PermRoute permId="transform-rules"><TransformRulesPage /></PermRoute>} />
+              <Route path="/export-rules" element={<PermRoute permId="export-rules"><ExportRulesPage /></PermRoute>} />
 
               {/* Administration Routes */}
               <Route path="/users" element={<AdminRoute><UsersPage /></AdminRoute>} />

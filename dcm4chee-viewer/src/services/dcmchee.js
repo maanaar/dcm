@@ -701,6 +701,19 @@ export const fetchExportTasks = async () => {
 // USER MANAGEMENT API
 // ============================================================================
 
+export const loginUser = async (username, password) => {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.detail || 'Login failed');
+  }
+  return await response.json(); // { success: true, user: { id, username, isAdmin, permissions, ... } }
+};
+
 export const fetchUsers = async () => {
   try {
     const response = await fetch(`${API_BASE}/users`);
@@ -735,22 +748,22 @@ export const deleteUser = async (id) => {
   return await response.json();
 };
 
-export const setUserRoles = async (id, roles) => {
-  const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}/roles`, {
+export const fetchUser = async (id) => {
+  try {
+    const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`);
+    if (!response.ok) throw new Error(`Failed: ${response.status}`);
+    return await response.json();
+  } catch (error) { console.error('❌ Error fetching user:', error); return null; }
+};
+
+export const setUserPermissions = async (id, permissions) => {
+  const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ roles }),
+    body: JSON.stringify({ permissions }),
   });
   if (!response.ok) throw new Error(await response.text());
   return await response.json();
-};
-
-export const fetchRoles = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/roles`);
-    if (!response.ok) throw new Error(`Failed: ${response.status}`);
-    return await response.json();
-  } catch (error) { console.error('❌ Error fetching roles:', error); return []; }
 };
 
 // ============================================================================
