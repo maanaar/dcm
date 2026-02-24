@@ -17,8 +17,9 @@ const getNavItems = () => {
       name: "Navigation",
       iconClass: "fa-solid fa-compass",
       children: [
-        { name: "Patient",  path: "/patients", permId: "patients" },
-        { name: "Studies",  path: "/studies",  permId: "studies"  },
+        { name: "Smart Search", path: "/smart-search", permId: null },
+        { name: "Patient",      path: "/patients",     permId: "patients" },
+        { name: "Studies",      path: "/studies",      permId: "studies"  },
       ]
     },
     {

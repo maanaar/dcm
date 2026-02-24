@@ -767,6 +767,41 @@ export const setUserPermissions = async (id, permissions) => {
 };
 
 // ============================================================================
+// SMART SEARCH
+// ============================================================================
+
+/**
+ * Fast fuzzy search across patients and studies.
+ * @param {string} q - search term
+ * @returns {Promise<{patients: Array, studies: Array}>}
+ */
+export const quickSearch = async (q) => {
+  if (!q || !q.trim()) return { patients: [], studies: [] };
+  const response = await fetch(`${API_BASE}/quick-search?q=${encodeURIComponent(q.trim())}`);
+  if (!response.ok) throw new Error(`Quick search failed: ${response.status}`);
+  return response.json();
+};
+
+/**
+ * Ask a natural-language question about the DICOM archive.
+ * @param {string} question
+ * @param {Array<{role: string, content: string}>} history - prior conversation turns
+ * @returns {Promise<{answer: string, model: string}>}
+ */
+export const smartSearch = async (question, history = []) => {
+  const response = await fetch(`${API_BASE}/smart-search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, history }),
+  });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(detail.detail || `Smart search failed: ${response.status}`);
+  }
+  return response.json();
+};
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 

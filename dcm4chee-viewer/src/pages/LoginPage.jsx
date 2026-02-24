@@ -22,6 +22,16 @@ export default function LoginPage() {
     }
   }, []);
 
+  const handleDemo = () => {
+    localStorage.setItem('authToken',       'demo');
+    localStorage.setItem('authMode',        'demo');
+    localStorage.setItem('userEmail',       'demo');
+    localStorage.setItem('isAdmin',         'false');
+    localStorage.setItem('userPermissions', JSON.stringify(ALL_PERMISSION_IDS));
+    localStorage.setItem('isAuthenticated', 'true');
+    navigate('/dashboard');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -118,6 +128,20 @@ export default function LoginPage() {
             {isLoading ? 'Signing In...' : 'Log In'}
           </button>
         </form>
+
+        <div className="flex items-center gap-3 mt-2">
+          <div className="flex-1 h-px bg-white/30" />
+          <span className="text-white/60 text-sm">or</span>
+          <div className="flex-1 h-px bg-white/30" />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleDemo}
+          className="w-full py-2 px-3 rounded-full border border-white/40 text-white hover:bg-white/10 transition text-sm font-medium"
+        >
+          Continue as Demo
+        </button>
       </div>
       </div>
       </>
