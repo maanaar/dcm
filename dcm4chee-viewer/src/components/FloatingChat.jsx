@@ -167,12 +167,12 @@ export default function FloatingChat() {
       {/* FAB toggle button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className={`w-13 h-13 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 ${
-          open
-            ? 'bg-gray-600 hover:bg-gray-700'
-            : 'bg-[#0a6e79] hover:bg-[#1E7586]'
-        }`}
-        style={{ width: 52, height: 52 }}
+        className="rounded-full shadow-lg flex items-center justify-center transition-all duration-200"
+        style={{
+          width: 52,
+          height: 52,
+          backgroundColor: open ? '#4b5563' : '#0a6e79',
+        }}
         title="AI Assistant"
       >
         <i className={`text-white text-lg fa-solid ${open ? 'fa-xmark' : 'fa-robot'}`} />

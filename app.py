@@ -1010,17 +1010,17 @@ def _hash_pw(pw: str) -> str:
     return hashlib.sha256(pw.encode()).hexdigest()
 
 
-def _row_to_user(row: tuple) -> dict:
-    uid, username, email, first_name, last_name, _, is_admin, enabled, permissions = row
+def _row_to_user(row) -> dict:
+    """Convert a DB row to a user dict. Works with tuple rows or sqlite3.Row."""
     return {
-        "id":          uid,
-        "username":    username,
-        "email":       email,
-        "firstName":   first_name,
-        "lastName":    last_name,
-        "isAdmin":     bool(is_admin),
-        "enabled":     bool(enabled),
-        "permissions": json.loads(permissions or "[]"),
+        "id":          row[0],
+        "username":    row[1],
+        "email":       row[2] if len(row) > 2 else '',
+        "firstName":   row[3] if len(row) > 3 else '',
+        "lastName":    row[4] if len(row) > 4 else '',
+        "isAdmin":     bool(row[6]) if len(row) > 6 else False,
+        "enabled":     bool(row[7]) if len(row) > 7 else True,
+        "permissions": json.loads(row[8] or "[]") if len(row) > 8 else [],
     }
 
 
@@ -1040,8 +1040,20 @@ def _init_db() -> None:
             permissions   TEXT DEFAULT '[]'
         )
     """)
-    # Seed a default admin account if the table is empty
-    c.execute("SELECT COUNT(*) FROM curalink_users")
+    # Schema migration: add any missing columns from a previous schema version
+    existing_cols = {row[1] for row in c.execute("PRAGMA table_info(curalink_users)")}
+    for col, definition in [
+        ('email',       "TEXT DEFAULT ''"),
+        ('first_name',  "TEXT DEFAULT ''"),
+        ('last_name',   "TEXT DEFAULT ''"),
+        ('is_admin',    "INTEGER DEFAULT 0"),
+        ('enabled',     "INTEGER DEFAULT 1"),
+        ('permissions', "TEXT DEFAULT '[]'"),
+    ]:
+        if col not in existing_cols:
+            c.execute(f"ALTER TABLE curalink_users ADD COLUMN {col} {definition}")
+    # Ensure the default admin account exists
+    c.execute("SELECT COUNT(*) FROM curalink_users WHERE username = 'admin'")
     if c.fetchone()[0] == 0:
         c.execute(
             "INSERT INTO curalink_users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
