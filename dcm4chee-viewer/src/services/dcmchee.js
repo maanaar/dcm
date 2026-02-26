@@ -701,11 +701,11 @@ export const fetchExportTasks = async () => {
 // USER MANAGEMENT API
 // ============================================================================
 
-export const loginUser = async (username, password) => {
+export const loginUser = async (email, password) => {
   const response = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, password }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));

@@ -1069,20 +1069,20 @@ _init_db()
 
 @app.post("/api/auth/login")
 async def curalink_login(request: Request):
-    """Authenticate a Curalink user and return their profile + permissions."""
+    """Authenticate a Curalink user by email and return their profile + permissions."""
     try:
         body     = await request.json()
-        username = body.get("username", "").strip()
+        email    = body.get("email", "").strip()
         password = body.get("password", "")
-        if not username or not password:
-            raise HTTPException(status_code=400, detail="Username and password required")
+        if not email or not password:
+            raise HTTPException(status_code=400, detail="Email and password required")
         conn = sqlite3.connect(DB_PATH)
         c    = conn.cursor()
-        c.execute("SELECT * FROM curalink_users WHERE username = ? AND enabled = 1", (username,))
+        c.execute("SELECT * FROM curalink_users WHERE email = ? AND enabled = 1", (email,))
         row = c.fetchone()
         conn.close()
         if not row or row[5] != _hash_pw(password):
-            raise HTTPException(status_code=401, detail="Invalid username or password")
+            raise HTTPException(status_code=401, detail="Invalid email or password")
         return {"success": True, "user": _row_to_user(row)}
     except HTTPException:
         raise

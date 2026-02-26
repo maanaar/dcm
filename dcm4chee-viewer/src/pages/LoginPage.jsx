@@ -71,10 +71,10 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 flex flex-col justify-center">
           <div>
-            <label className="block text-xl text-white mb-1">Username</label>
+            <label className="block text-xl text-white mb-1">Email</label>
             <input
-              type="text"
-              placeholder="Enter username"
+              type="email"
+              placeholder="Enter email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border rounded-[16px] outline-none focus:ring-2 focus:ring-slate-400"
