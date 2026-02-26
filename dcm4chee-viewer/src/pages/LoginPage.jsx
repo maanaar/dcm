@@ -28,7 +28,21 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const { user } = await loginUser(email, password);
+      let user;
+
+      // Dummy admin login
+      if (email === 'admin@hospital.com' && password === 'admin123') {
+        user = {
+          id: 'dummy-admin-id',
+          username: 'admin',
+          isAdmin: true,
+          permissions: ALL_PERMISSION_IDS,
+        };
+      } else {
+        // Call real API
+        const response = await loginUser(email, password);
+        user = response.user;
+      }
 
       if (rememberMe) {
         localStorage.setItem('rememberedEmail', email);

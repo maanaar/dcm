@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from urllib.parse import parse_qs
 import asyncio
 import os
 import sqlite3
@@ -1052,13 +1053,19 @@ def _init_db() -> None:
     ]:
         if col not in existing_cols:
             c.execute(f"ALTER TABLE curalink_users ADD COLUMN {col} {definition}")
-    # Ensure the default admin account exists
+    # Ensure the default admin account exists with correct credentials
     c.execute("SELECT COUNT(*) FROM curalink_users WHERE username = 'admin'")
     if c.fetchone()[0] == 0:
         c.execute(
             "INSERT INTO curalink_users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (str(uuid.uuid4()), "admin", "admin@hospital.com", "Admin", "User",
              _hash_pw("admin123"), 1, 1, json.dumps(_ALL_PERM_IDS))
+        )
+    else:
+        # Patch existing admin: ensure email is set (may be empty from old schema)
+        c.execute(
+            "UPDATE curalink_users SET email = 'admin@hospital.com', enabled = 1 "
+            "WHERE username = 'admin' AND (email = '' OR email IS NULL)"
         )
     conn.commit()
     conn.close()
