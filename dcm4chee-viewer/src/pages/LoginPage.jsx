@@ -30,8 +30,8 @@ export default function LoginPage() {
     try {
       let user;
 
-      // Dummy admin login
-      if (email === 'admin@hospital.com' && password === 'admin123') {
+      // Dummy admin login (supports both email and username)
+      if ((email === 'admin@hospital.com' || email === 'admin') && password === 'admin123') {
         user = {
           id: 'dummy-admin-id',
           username: 'admin',
@@ -85,10 +85,10 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6 flex flex-col justify-center">
           <div>
-            <label className="block text-xl text-white mb-1">Email</label>
+            <label className="block text-xl text-white mb-1">Email or Username</label>
             <input
-              type="email"
-              placeholder="Enter email"
+              type="text"
+              placeholder="Enter email or username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border rounded-[16px] outline-none focus:ring-2 focus:ring-slate-400"

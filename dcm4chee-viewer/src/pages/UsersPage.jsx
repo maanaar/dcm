@@ -95,6 +95,7 @@ export default function UsersPage() {
   // ── create ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     if (!newUser.username.trim()) { setSaveError('Username is required.'); return; }
+    if (!newUser.password) { setSaveError('Password is required.'); return; }
     setSaving(true); setSaveError(null);
     try {
       await createUser(newUser);

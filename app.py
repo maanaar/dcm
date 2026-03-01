@@ -1079,13 +1079,16 @@ async def curalink_login(request: Request):
     """Authenticate a Curalink user by email and return their profile + permissions."""
     try:
         body     = await request.json()
-        email    = body.get("email", "").strip()
+        email    = (body.get("email") or body.get("username") or "").strip()
         password = body.get("password", "")
         if not email or not password:
-            raise HTTPException(status_code=400, detail="Email and password required")
+            raise HTTPException(status_code=400, detail="Username/email and password required")
         conn = sqlite3.connect(DB_PATH)
         c    = conn.cursor()
-        c.execute("SELECT * FROM curalink_users WHERE email = ? AND enabled = 1", (email,))
+        c.execute(
+            "SELECT * FROM curalink_users WHERE (email = ? OR username = ?) AND enabled = 1",
+            (email, email),
+        )
         row = c.fetchone()
         conn.close()
         if not row or row[5] != _hash_pw(password):
