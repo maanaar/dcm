@@ -59,9 +59,10 @@ export default function UsersPage() {
   const [saveError, setSaveError] = useState(null);
 
   // inline permission editor state
-  const [editingPerms, setEditingPerms] = useState(null); // user id
-  const [pendingPerms, setPendingPerms] = useState([]);
-  const [permsSaving,  setPermsSaving]  = useState(false);
+  const [editingPerms,   setEditingPerms]   = useState(null); // user id
+  const [pendingPerms,   setPendingPerms]   = useState([]);
+  const [pendingIsAdmin, setPendingIsAdmin] = useState(false);
+  const [permsSaving,    setPermsSaving]    = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -110,17 +111,20 @@ export default function UsersPage() {
   const openPermEditor = useCallback((user) => {
     setEditingPerms(user.id);
     setPendingPerms(user.permissions || []);
+    setPendingIsAdmin(user.isAdmin || false);
   }, []);
 
   const handleSavePerms = useCallback(async (userId) => {
     setPermsSaving(true);
     try {
-      await setUserPermissions(userId, pendingPerms);
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, permissions: pendingPerms } : u));
+      await updateUser(userId, { isAdmin: pendingIsAdmin, permissions: pendingIsAdmin ? ALL_PERMISSION_IDS : pendingPerms });
+      setUsers(prev => prev.map(u => u.id === userId
+        ? { ...u, isAdmin: pendingIsAdmin, permissions: pendingIsAdmin ? ALL_PERMISSION_IDS : pendingPerms }
+        : u));
       setEditingPerms(null);
-    } catch (e) { alert(`Failed to update permissions: ${e.message}`); }
+    } catch (e) { alert(`Failed to update access: ${e.message}`); }
     finally { setPermsSaving(false); }
-  }, [pendingPerms]);
+  }, [pendingIsAdmin, pendingPerms]);
 
   // ── filter ──────────────────────────────────────────────────────────────────
   const filtered = useMemo(() => users.filter(u => {
@@ -261,15 +265,28 @@ export default function UsersPage() {
                           <tr className="border-t border-[#0a6e79]/20 bg-teal-50/60">
                             <td colSpan={7} className="px-6 py-4">
                               <div className="mb-3 flex items-center justify-between">
-                                <span className="text-sm font-semibold text-[#0a6e79]">Screen Access for <em>{user.username}</em></span>
-                                <div className="flex gap-2">
-                                  <button onClick={() => setPendingPerms(ALL_PERMISSION_IDS)}
-                                    className="text-xs text-[#0a6e79] underline">All</button>
-                                  <button onClick={() => setPendingPerms([])}
-                                    className="text-xs text-gray-500 underline">None</button>
-                                </div>
+                                <span className="text-sm font-semibold text-[#0a6e79]">Access for <em>{user.username}</em></span>
+                                {!pendingIsAdmin && (
+                                  <div className="flex gap-2">
+                                    <button onClick={() => setPendingPerms(ALL_PERMISSION_IDS)}
+                                      className="text-xs text-[#0a6e79] underline">All</button>
+                                    <button onClick={() => setPendingPerms([])}
+                                      className="text-xs text-gray-500 underline">None</button>
+                                  </div>
+                                )}
                               </div>
-                              <PermissionCheckboxes selected={pendingPerms} onChange={setPendingPerms} />
+                              <label className="flex items-center gap-2 mb-3 cursor-pointer w-fit">
+                                <input
+                                  type="checkbox"
+                                  className="accent-[#0a6e79] w-3.5 h-3.5"
+                                  checked={pendingIsAdmin}
+                                  onChange={e => setPendingIsAdmin(e.target.checked)}
+                                />
+                                <span className="text-xs font-semibold text-purple-700">Admin (full access + Users page)</span>
+                              </label>
+                              {!pendingIsAdmin && (
+                                <PermissionCheckboxes selected={pendingPerms} onChange={setPendingPerms} />
+                              )}
                               <div className="flex gap-2 mt-3">
                                 <button onClick={() => handleSavePerms(user.id)} disabled={permsSaving}
                                   className="px-4 py-1.5 bg-[#0a6e79] hover:bg-[#1E7586] text-white rounded-lg text-xs font-semibold transition disabled:opacity-50">
@@ -373,13 +390,26 @@ export default function UsersPage() {
                       {editingPerms === user.id && (
                         <div className="border border-[#0a6e79]/30 rounded-lg p-3 bg-teal-50/50">
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs text-[#0a6e79] font-semibold">Screen Access</p>
-                            <div className="flex gap-2">
-                              <button onClick={() => setPendingPerms(ALL_PERMISSION_IDS)} className="text-xs text-[#0a6e79] underline">All</button>
-                              <button onClick={() => setPendingPerms([])} className="text-xs text-gray-500 underline">None</button>
-                            </div>
+                            <p className="text-xs text-[#0a6e79] font-semibold">Access Rights</p>
+                            {!pendingIsAdmin && (
+                              <div className="flex gap-2">
+                                <button onClick={() => setPendingPerms(ALL_PERMISSION_IDS)} className="text-xs text-[#0a6e79] underline">All</button>
+                                <button onClick={() => setPendingPerms([])} className="text-xs text-gray-500 underline">None</button>
+                              </div>
+                            )}
                           </div>
-                          <PermissionCheckboxes selected={pendingPerms} onChange={setPendingPerms} />
+                          <label className="flex items-center gap-2 mb-2 cursor-pointer w-fit">
+                            <input
+                              type="checkbox"
+                              className="accent-[#0a6e79] w-3.5 h-3.5"
+                              checked={pendingIsAdmin}
+                              onChange={e => setPendingIsAdmin(e.target.checked)}
+                            />
+                            <span className="text-xs font-semibold text-purple-700">Admin (full access + Users page)</span>
+                          </label>
+                          {!pendingIsAdmin && (
+                            <PermissionCheckboxes selected={pendingPerms} onChange={setPendingPerms} />
+                          )}
                           <div className="flex gap-2 mt-2">
                             <button onClick={() => handleSavePerms(user.id)} disabled={permsSaving}
                               className="flex-1 py-1.5 bg-[#0a6e79] text-white rounded-lg text-xs font-semibold transition disabled:opacity-50">
