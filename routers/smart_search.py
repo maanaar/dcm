@@ -1,5 +1,5 @@
 """
-Smart Search router — LangChain + Ollama/Qwen
+Smart Search router — Google Gemini 2.0 Flash
   GET  /api/quick-search   fast fuzzy search across patients & studies
   POST /api/smart-search   natural-language Q&A about the DICOM archive
 """
@@ -7,16 +7,15 @@ import asyncio
 import os
 from typing import List
 
+import google.generativeai as genai
 from fastapi import APIRouter, HTTPException, Request
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_ollama import ChatOllama
 
 # ── shared state ─────────────────────────────────────────────────────────────
 from app_state import (
     DCM4CHEE_URL,
     DEFAULT_WEBAPP,
-    OLLAMA_MODEL,
-    OLLAMA_URL,
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
     client,
     fetch_hospitals_cached,
     get_token,
@@ -27,11 +26,26 @@ from app_state import (
 
 router = APIRouter()
 
+genai.configure(api_key=GEMINI_API_KEY)
+
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
-def _make_llm() -> ChatOllama:
-    return ChatOllama(base_url=OLLAMA_URL, model=OLLAMA_MODEL, timeout=60)
+async def _call_gemini(system: str, history: list, question: str) -> str:
+    """Send a message to Gemini with conversation history."""
+    model = genai.GenerativeModel(
+        model_name=GEMINI_MODEL,
+        system_instruction=system,
+    )
+    # Gemini uses "model" instead of "assistant"
+    gemini_history = [
+        {"role": "model" if h["role"] == "assistant" else "user",
+         "parts": [h["content"]]}
+        for h in history
+    ]
+    chat = model.start_chat(history=gemini_history)
+    response = await chat.send_message_async(question)
+    return response.text
 
 
 # ── endpoints ────────────────────────────────────────────────────────────────
@@ -91,10 +105,13 @@ async def quick_search(q: str = "", webAppService: str = DEFAULT_WEBAPP):
 
 @router.post("/smart-search")
 async def smart_search(request: Request):
-    """Answer natural-language questions about the DICOM archive using LangChain + Ollama."""
+    """Answer natural-language questions about the DICOM archive using Gemini."""
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=503, detail="GEMINI_API_KEY is not configured.")
+
     body     = await request.json()
     question = (body.get("question") or "").strip()
-    history  = body.get("history", [])   # [{role: "user"|"assistant", content: "..."}]
+    history  = body.get("history", [])  # [{role: "user"|"assistant", content: "..."}]
 
     if not question:
         raise HTTPException(status_code=400, detail="question is required")
@@ -177,22 +194,12 @@ async def smart_search(request: Request):
         f"Current archive data:\n{context}"
     )
 
-    # ── Build LangChain message list ──────────────────────────────────────
-    lc_messages = [SystemMessage(content=system_content)]
-    for h in history:
-        if h.get("role") == "user":
-            lc_messages.append(HumanMessage(content=h["content"]))
-        elif h.get("role") == "assistant":
-            lc_messages.append(AIMessage(content=h["content"]))
-    lc_messages.append(HumanMessage(content=question))
-
-    # ── Call Ollama via LangChain ─────────────────────────────────────────
+    # ── Call Gemini ───────────────────────────────────────────────────────
     try:
-        llm    = _make_llm()
-        result = await asyncio.get_event_loop().run_in_executor(None, llm.invoke, lc_messages)
-        return {"answer": result.content, "model": OLLAMA_MODEL}
+        answer = await _call_gemini(system_content, history, question)
+        return {"answer": answer, "model": GEMINI_MODEL}
     except Exception as e:
         err = str(e)
-        if "connect" in err.lower() or "connection" in err.lower():
-            raise HTTPException(status_code=503, detail=f"Cannot connect to Ollama at {OLLAMA_URL}. Is it running?")
-        raise HTTPException(status_code=502, detail=f"LLM error: {err}")
+        if "api_key" in err.lower() or "invalid" in err.lower():
+            raise HTTPException(status_code=401, detail=f"Gemini API key error: {err}")
+        raise HTTPException(status_code=502, detail=f"Gemini error: {err}")

@@ -18,8 +18,8 @@ USERNAME                = os.getenv("DCM4CHEE_USERNAME",        "root")
 PASSWORD                = os.getenv("DCM4CHEE_PASSWORD",        "changeit")
 KEYCLOAK_ADMIN_USERNAME = os.getenv("KEYCLOAK_ADMIN_USERNAME",  "admin")
 KEYCLOAK_ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD",  "admin")
-OLLAMA_URL              = os.getenv("OLLAMA_URL",               "http://localhost:11434")
-OLLAMA_MODEL            = os.getenv("OLLAMA_MODEL",             "qwen2.5")
+GEMINI_API_KEY          = os.getenv("GEMINI_API_KEY",           "")
+GEMINI_MODEL            = os.getenv("GEMINI_MODEL",             "gemini-2.0-flash")
 DEFAULT_WEBAPP          = os.getenv("DEFAULT_WEBAPP",           "DCM4CHEE")
 
 # ── HTTP client (shared, single instance) ────────────────────────────────────
