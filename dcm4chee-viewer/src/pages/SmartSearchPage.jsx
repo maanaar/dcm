@@ -96,7 +96,7 @@ export default function SmartSearchPage() {
           <img src="/logo-icon.png" width={44} height={44} alt="icon" className="shrink-0" />
           <div>
             <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Smart Search</h2>
-            <p className="text-xs text-gray-500">Fuzzy search + AI assistant powered by Qwen via Ollama</p>
+            <p className="text-xs text-gray-500">AI assistant and search</p>
           </div>
         </div>
 
@@ -200,7 +200,7 @@ export default function SmartSearchPage() {
             <div className="flex items-center justify-between px-4 py-2 border-b bg-white/40">
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <i className="fa-solid fa-robot text-[#0a6e79]" />
-                <span className="font-medium">Qwen Assistant</span>
+                <span className="font-medium">Curasmart Assistant</span>
                 <span className="text-xs text-gray-400">— ask anything about the archive</span>
               </div>
               {messages.length > 0 && (
