@@ -428,7 +428,7 @@ export default function UsersPage() {
                           checked={newUser.isAdmin}
                           onChange={e => setNewUser(p => ({ ...p, isAdmin: e.target.checked, permissions: e.target.checked ? ALL_PERMISSION_IDS : p.permissions }))}
                         />
-                        <span className="text-xs font-semibold text-purple-700">Admin (full access + Users page)</span>
+                        <span className="text-xs font-semibold text-purple-700">Admin (full access & manage users accounts)</span>
                       </label>
                       {!newUser.isAdmin && (
                         <>
