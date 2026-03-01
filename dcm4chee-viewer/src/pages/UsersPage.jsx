@@ -7,7 +7,7 @@ const inp =
   'w-full px-2 py-1.5 border border-gray-300 rounded-lg text-xs outline-none ' +
   'focus:ring-1 focus:ring-[#0a6e79] focus:border-[#0a6e79] bg-white placeholder-gray-400';
 
-const BLANK = { username: '', email: '', firstName: '', lastName: '', password: '', permissions: [] };
+const BLANK = { username: '', email: '', firstName: '', lastName: '', password: '', isAdmin: false, permissions: [] };
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const enabledBadge = (enabled) =>
@@ -222,7 +222,14 @@ export default function UsersPage() {
                         <tr key={user.id}
                           className={`border-t border-gray-100 hover:bg-[#00768308] transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
                           <td className="px-4 py-3 text-gray-400">{idx + 1}</td>
-                          <td className="px-4 py-3 font-semibold text-[#0a6e79]">{user.username}</td>
+                          <td className="px-4 py-3 font-semibold text-[#0a6e79]">
+                            <div className="flex items-center gap-1.5">
+                              {user.username}
+                              {user.isAdmin && (
+                                <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-bold uppercase">Admin</span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-gray-700">
                             {[user.firstName, user.lastName].filter(Boolean).join(' ') || '—'}
                           </td>
@@ -304,10 +311,21 @@ export default function UsersPage() {
                             onChange={e => setNewUser(p => ({ ...p, password: e.target.value }))} />
                         </td>
                         <td className="px-3 py-3" colSpan={2}>
-                          <PermissionCheckboxes
-                            selected={newUser.permissions}
-                            onChange={perms => setNewUser(p => ({ ...p, permissions: perms }))}
-                          />
+                          <label className="flex items-center gap-2 mb-2 cursor-pointer w-fit">
+                            <input
+                              type="checkbox"
+                              className="accent-[#0a6e79] w-3.5 h-3.5"
+                              checked={newUser.isAdmin}
+                              onChange={e => setNewUser(p => ({ ...p, isAdmin: e.target.checked, permissions: e.target.checked ? ALL_PERMISSION_IDS : p.permissions }))}
+                            />
+                            <span className="text-xs font-semibold text-purple-700">Admin (full access + Users page)</span>
+                          </label>
+                          {!newUser.isAdmin && (
+                            <PermissionCheckboxes
+                              selected={newUser.permissions}
+                              onChange={perms => setNewUser(p => ({ ...p, permissions: perms }))}
+                            />
+                          )}
                           {saveError && <p className="text-red-600 text-xs mt-1">{saveError}</p>}
                           <div className="flex gap-2 mt-2">
                             <button onClick={handleSave} disabled={saving}
@@ -331,7 +349,12 @@ export default function UsersPage() {
                 {filtered.map(user => (
                   <div key={user.id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="font-semibold text-[#0a6e79] text-sm">{user.username}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-[#0a6e79] text-sm">{user.username}</span>
+                        {user.isAdmin && (
+                          <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-bold uppercase">Admin</span>
+                        )}
+                      </div>
                       <span className={enabledBadge(user.enabled)} onClick={() => handleToggleEnabled(user)}>
                         {user.enabled ? 'Enabled' : 'Disabled'}
                       </span>
@@ -398,11 +421,24 @@ export default function UsersPage() {
                       </div>
                     ))}
                     <div>
-                      <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Screen Access</label>
-                      <PermissionCheckboxes
-                        selected={newUser.permissions}
-                        onChange={perms => setNewUser(p => ({ ...p, permissions: perms }))}
-                      />
+                      <label className="flex items-center gap-2 mb-2 cursor-pointer w-fit">
+                        <input
+                          type="checkbox"
+                          className="accent-[#0a6e79] w-3.5 h-3.5"
+                          checked={newUser.isAdmin}
+                          onChange={e => setNewUser(p => ({ ...p, isAdmin: e.target.checked, permissions: e.target.checked ? ALL_PERMISSION_IDS : p.permissions }))}
+                        />
+                        <span className="text-xs font-semibold text-purple-700">Admin (full access + Users page)</span>
+                      </label>
+                      {!newUser.isAdmin && (
+                        <>
+                          <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Screen Access</label>
+                          <PermissionCheckboxes
+                            selected={newUser.permissions}
+                            onChange={perms => setNewUser(p => ({ ...p, permissions: perms }))}
+                          />
+                        </>
+                      )}
                     </div>
                     {saveError && <p className="text-red-600 text-xs">{saveError}</p>}
                     <div className="flex gap-2 pt-1">
