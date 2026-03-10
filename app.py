@@ -12,13 +12,12 @@ from typing import Optional, Dict, List
 
 # ── shared state (config, httpx client, DICOM helpers) ───────────────────────
 from app_state import (
-    DCM4CHEE_URL, DEFAULT_WEBAPP, client,
-    get_token, get_webapp_path, clean_query_params, _gv, _fmt_date,
+    DCM4CHEE_URL, client,
+    get_token, clean_query_params, _gv, _fmt_date,
     _fetch_all_series, fetch_hospitals_cached,
 )
 
-# ── routers ───────────────────────────────────────────────────────────────────
-from routers.smart_search import router as smart_search_router
+DCM_PATH = f"/dcm4chee-arc/aets/{os.getenv('DEFAULT_WEBAPP', 'DCM4CHEE')}/rs"
 
 app = FastAPI()
 
@@ -29,8 +28,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.include_router(smart_search_router, prefix="/api")
 
 # ============================================================================
 # HOSPITALS
@@ -56,11 +53,11 @@ async def get_hospital(hospital_id: int):
 # ============================================================================
 
 @app.get("/api/patients")
-async def search_patients(request: Request, webAppService: str = DEFAULT_WEBAPP):
+async def search_patients(request: Request):
     try:
         token = await get_token()
         query_params = clean_query_params(str(request.url.query))
-        dcm_path = get_webapp_path(webAppService)
+        dcm_path = DCM_PATH
         headers = {"Accept": "application/dicom+json", "Authorization": f"Bearer {token}"}
 
         # If caller already specified a limit, honour it (single request)
@@ -101,10 +98,10 @@ async def search_patients(request: Request, webAppService: str = DEFAULT_WEBAPP)
 
 
 @app.get("/api/patients/{patient_id}/studies")
-async def get_patient_studies(patient_id: str, webAppService: str = DEFAULT_WEBAPP):
+async def get_patient_studies(patient_id: str):
     try:
         token = await get_token()
-        dcm_path = get_webapp_path(webAppService)
+        dcm_path = DCM_PATH
         url = f"{DCM4CHEE_URL}{dcm_path}/patients/{patient_id}/studies"
         headers = {"Accept": "application/dicom+json", "Authorization": f"Bearer {token}"}
         response = await client.get(url, headers=headers)
@@ -124,11 +121,11 @@ async def get_patient_studies(patient_id: str, webAppService: str = DEFAULT_WEBA
 # ============================================================================
 
 @app.get("/api/studies")
-async def search_studies(request: Request, webAppService: str = DEFAULT_WEBAPP):
+async def search_studies(request: Request):
     try:
         token = await get_token()
         query_params = clean_query_params(str(request.url.query))
-        dcm_path = get_webapp_path(webAppService)
+        dcm_path = DCM_PATH
         url = f"{DCM4CHEE_URL}{dcm_path}/studies"
         if query_params:
             url += f"?{query_params}"
@@ -150,11 +147,11 @@ async def search_studies(request: Request, webAppService: str = DEFAULT_WEBAPP):
 # ============================================================================
 
 @app.get("/api/mwl")
-async def search_mwl(request: Request, webAppService: str = DEFAULT_WEBAPP):
+async def search_mwl(request: Request):
     try:
         token = await get_token()
         query_params = clean_query_params(str(request.url.query))
-        dcm_path = get_webapp_path(webAppService)
+        dcm_path = DCM_PATH
         url = f"{DCM4CHEE_URL}{dcm_path}/mwlitems"
         if query_params:
             url += f"?{query_params}"
@@ -251,7 +248,7 @@ async def get_dashboard_stats():
     try:
         token    = await get_token()
         headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
-        dcm_path = get_webapp_path(DEFAULT_WEBAPP)
+        dcm_path = DCM_PATH
 
         # Fetch recent studies for modality breakdown, series/instance counts, recent-studies widget
         recent_resp = await client.get(
@@ -284,7 +281,7 @@ async def get_hospital_dashboard(hospital_id: str):
     try:
         token    = await get_token()
         headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
-        dcm_path = get_webapp_path(DEFAULT_WEBAPP)
+        dcm_path = DCM_PATH
 
         # Get the institution name for this hospital_id
         hospitals = await list_hospitals()
@@ -352,11 +349,11 @@ async def get_hospital_dashboard(hospital_id: str):
 # ============================================================================
 
 @app.get("/api/series")
-async def search_series(request: Request, webAppService: str = DEFAULT_WEBAPP):
+async def search_series(request: Request):
     try:
         token = await get_token()
         query_params = clean_query_params(str(request.url.query))
-        dcm_path = get_webapp_path(webAppService)
+        dcm_path = DCM_PATH
         url = f"{DCM4CHEE_URL}{dcm_path}/series"
         if query_params:
             url += f"?{query_params}"
@@ -451,7 +448,7 @@ async def create_routing_rule(request: Request):
             for d in (devices_resp.json() or [])
         ]
 
-        local_ae = body.get("localAETitle", DEFAULT_WEBAPP)
+        local_ae = body.get("localAETitle", "DCM4CHEE")
         dev_name, config, ae_idx = await _find_ae_in_devices(token, local_ae, device_names)
         if dev_name is None:
             raise HTTPException(status_code=404, detail=f"AE '{local_ae}' not found in any device")
@@ -516,7 +513,7 @@ async def create_transform_rule(request: Request):
             for d in (devices_resp.json() or [])
         ]
 
-        local_ae = body.get("localAETitle", DEFAULT_WEBAPP)
+        local_ae = body.get("localAETitle", "DCM4CHEE")
         dev_name, config, ae_idx = await _find_ae_in_devices(token, local_ae, device_names)
         if dev_name is None:
             raise HTTPException(status_code=404, detail=f"AE '{local_ae}' not found in any device")
@@ -747,7 +744,7 @@ async def list_modalities():
 async def debug_institutions():
     try:
         token    = await get_token()
-        dcm_path = get_webapp_path(DEFAULT_WEBAPP)
+        dcm_path = DCM_PATH
         headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
 
         studies_resp = await client.get(
