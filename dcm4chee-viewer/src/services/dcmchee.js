@@ -697,6 +697,96 @@ export const fetchExportTasks = async () => {
   }
 };
 
+export const deleteExporter = async (exporterID, deviceName) => {
+  const url = deviceName
+    ? `${API_BASE}/exporters/${encodeURIComponent(exporterID)}?deviceName=${encodeURIComponent(deviceName)}`
+    : `${API_BASE}/exporters/${encodeURIComponent(exporterID)}`;
+  const response = await fetch(url, { method: 'DELETE' });
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
+
+export const fetchExportTaskList = async (filters = {}) => {
+  try {
+    const params = new URLSearchParams();
+    if (filters.exporterID) params.append('exporterID', filters.exporterID);
+    if (filters.deviceName) params.append('deviceName', filters.deviceName);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.studyInstanceUID) params.append('studyInstanceUID', filters.studyInstanceUID);
+    if (filters.batchID) params.append('batchID', filters.batchID);
+    if (filters.createdTime) params.append('createdTime', filters.createdTime);
+    if (filters.updatedTime) params.append('updatedTime', filters.updatedTime);
+    params.append('limit', filters.limit || 20);
+    params.append('offset', filters.offset || 0);
+    const response = await fetch(`${API_BASE}/export-tasks/list?${params}`);
+    if (!response.ok) throw new Error(`Failed: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error('❌ Error fetching export task list:', error);
+    return [];
+  }
+};
+
+export const countExportTasksFiltered = async (filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.exporterID) params.append('exporterID', filters.exporterID);
+  if (filters.deviceName) params.append('deviceName', filters.deviceName);
+  if (filters.status) params.append('status', filters.status);
+  if (filters.studyInstanceUID) params.append('studyInstanceUID', filters.studyInstanceUID);
+  if (filters.batchID) params.append('batchID', filters.batchID);
+  if (filters.createdTime) params.append('createdTime', filters.createdTime);
+  if (filters.updatedTime) params.append('updatedTime', filters.updatedTime);
+  const response = await fetch(`${API_BASE}/export-tasks/count?${params}`);
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
+
+export const cancelExportTasks = async (filters = {}) => {
+  const response = await fetch(`${API_BASE}/export-tasks/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filters),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
+
+export const rescheduleExportTasks = async (filters = {}) => {
+  const response = await fetch(`${API_BASE}/export-tasks/reschedule`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(filters),
+  });
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
+
+export const deleteExportTasks = async (filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.exporterID) params.append('exporterID', filters.exporterID);
+  if (filters.deviceName) params.append('deviceName', filters.deviceName);
+  if (filters.status) params.append('status', filters.status);
+  if (filters.studyInstanceUID) params.append('studyInstanceUID', filters.studyInstanceUID);
+  if (filters.batchID) params.append('batchID', filters.batchID);
+  if (filters.createdTime) params.append('createdTime', filters.createdTime);
+  if (filters.updatedTime) params.append('updatedTime', filters.updatedTime);
+  const response = await fetch(`${API_BASE}/export-tasks?${params}`, { method: 'DELETE' });
+  if (!response.ok) throw new Error(await response.text());
+  return await response.json();
+};
+
+export const getExportTasksCSVUrl = (filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.exporterID) params.append('exporterID', filters.exporterID);
+  if (filters.deviceName) params.append('deviceName', filters.deviceName);
+  if (filters.status) params.append('status', filters.status);
+  if (filters.studyInstanceUID) params.append('studyInstanceUID', filters.studyInstanceUID);
+  if (filters.batchID) params.append('batchID', filters.batchID);
+  if (filters.createdTime) params.append('createdTime', filters.createdTime);
+  if (filters.updatedTime) params.append('updatedTime', filters.updatedTime);
+  return `${API_BASE}/export-tasks/csv?${params}`;
+};
+
 // ============================================================================
 // USER MANAGEMENT API
 // ============================================================================

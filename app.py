@@ -799,6 +799,35 @@ async def _get_all_device_configs(token: str) -> list[tuple[str, dict]]:
     return list(zip(names, configs))
 
 
+@app.delete("/api/exporters/{exporter_id}")
+async def delete_exporter(exporter_id: str, deviceName: Optional[str] = None):
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        device_configs = await _get_all_device_configs(token)
+        for name, config in device_configs:
+            if deviceName and name != deviceName:
+                continue
+            archive = config.get("dcmDevice", {}).get("dcmArchiveDevice", {})
+            exporters = archive.get("dcmExporter", [])
+            new_exporters = [e for e in exporters if e.get("dcmExporterID") != exporter_id]
+            if len(new_exporters) == len(exporters):
+                continue
+            archive["dcmExporter"] = new_exporters
+            put = await client.put(
+                f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{name}",
+                json=config, headers={**headers, "Content-Type": "application/json"},
+            )
+            if put.status_code not in (200, 204):
+                raise HTTPException(status_code=put.status_code, detail=put.text)
+            return {"success": True, "exporterID": exporter_id, "device": name}
+        raise HTTPException(status_code=404, detail=f"Exporter '{exporter_id}' not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/exporters")
 async def list_exporters():
     try:
@@ -991,6 +1020,195 @@ async def list_export_tasks():
 
         counts = await asyncio.gather(*[get_count(s) for s in statuses])
         return {s: c for s, c in zip(statuses, counts)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export-tasks/list")
+async def list_export_task_items(
+    exporterID: Optional[str] = None,
+    deviceName: Optional[str] = None,
+    status: Optional[str] = None,
+    studyInstanceUID: Optional[str] = None,
+    batchID: Optional[str] = None,
+    createdTime: Optional[str] = None,
+    updatedTime: Optional[str] = None,
+    limit: int = 20,
+    offset: int = 0,
+    orderby: Optional[str] = "-updatedTime",
+):
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        params: Dict = {"limit": limit, "offset": offset}
+        if exporterID: params["exporterID"] = exporterID
+        if deviceName: params["deviceName"] = deviceName
+        if status: params["status"] = status
+        if studyInstanceUID: params["StudyInstanceUID"] = studyInstanceUID
+        if batchID: params["batchID"] = batchID
+        if createdTime: params["createdTime"] = createdTime
+        if updatedTime: params["updatedTime"] = updatedTime
+        if orderby: params["orderby"] = orderby
+        resp = await client.get(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export",
+            params=params, headers=headers, timeout=15,
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export-tasks/count")
+async def count_export_tasks_filtered(
+    exporterID: Optional[str] = None,
+    deviceName: Optional[str] = None,
+    status: Optional[str] = None,
+    studyInstanceUID: Optional[str] = None,
+    batchID: Optional[str] = None,
+    createdTime: Optional[str] = None,
+    updatedTime: Optional[str] = None,
+):
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        params: Dict = {}
+        if exporterID: params["exporterID"] = exporterID
+        if deviceName: params["deviceName"] = deviceName
+        if status: params["status"] = status
+        if studyInstanceUID: params["StudyInstanceUID"] = studyInstanceUID
+        if batchID: params["batchID"] = batchID
+        if createdTime: params["createdTime"] = createdTime
+        if updatedTime: params["updatedTime"] = updatedTime
+        resp = await client.get(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export/count",
+            params=params, headers=headers, timeout=10,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            return {"count": data.get("count", 0) if isinstance(data, dict) else int(data)}
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/export-tasks/cancel")
+async def cancel_export_tasks(request: Request):
+    try:
+        body = await request.json()
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        params = {k: v for k, v in body.items() if v}
+        resp = await client.post(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export/cancel",
+            params=params, headers=headers, timeout=15,
+        )
+        if resp.status_code in (200, 204):
+            return {"success": True, "count": resp.json() if resp.text else 0}
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/export-tasks/reschedule")
+async def reschedule_export_tasks(request: Request):
+    try:
+        body = await request.json()
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        params = {k: v for k, v in body.items() if v}
+        resp = await client.post(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export/reschedule",
+            params=params, headers=headers, timeout=15,
+        )
+        if resp.status_code in (200, 204):
+            return {"success": True, "count": resp.json() if resp.text else 0}
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/export-tasks")
+async def delete_export_tasks(
+    exporterID: Optional[str] = None,
+    deviceName: Optional[str] = None,
+    status: Optional[str] = None,
+    studyInstanceUID: Optional[str] = None,
+    batchID: Optional[str] = None,
+    createdTime: Optional[str] = None,
+    updatedTime: Optional[str] = None,
+):
+    try:
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        params: Dict = {}
+        if exporterID: params["exporterID"] = exporterID
+        if deviceName: params["deviceName"] = deviceName
+        if status: params["status"] = status
+        if studyInstanceUID: params["StudyInstanceUID"] = studyInstanceUID
+        if batchID: params["batchID"] = batchID
+        if createdTime: params["createdTime"] = createdTime
+        if updatedTime: params["updatedTime"] = updatedTime
+        resp = await client.delete(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export",
+            params=params, headers=headers, timeout=15,
+        )
+        if resp.status_code in (200, 204):
+            return {"success": True, "count": resp.json() if resp.text else 0}
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/export-tasks/csv")
+async def download_export_tasks_csv(
+    exporterID: Optional[str] = None,
+    deviceName: Optional[str] = None,
+    status: Optional[str] = None,
+    studyInstanceUID: Optional[str] = None,
+    batchID: Optional[str] = None,
+    createdTime: Optional[str] = None,
+    updatedTime: Optional[str] = None,
+    limit: int = 500,
+    offset: int = 0,
+):
+    try:
+        from fastapi.responses import StreamingResponse
+        token = await get_token()
+        headers = {"Authorization": f"Bearer {token}", "Accept": "text/csv"}
+        params: Dict = {"limit": limit, "offset": offset}
+        if exporterID: params["exporterID"] = exporterID
+        if deviceName: params["deviceName"] = deviceName
+        if status: params["status"] = status
+        if studyInstanceUID: params["StudyInstanceUID"] = studyInstanceUID
+        if batchID: params["batchID"] = batchID
+        if createdTime: params["createdTime"] = createdTime
+        if updatedTime: params["updatedTime"] = updatedTime
+        resp = await client.get(
+            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export",
+            params=params, headers=headers, timeout=30,
+        )
+        if resp.status_code == 200:
+            import io
+            return StreamingResponse(
+                io.BytesIO(resp.content),
+                media_type="text/csv",
+                headers={"Content-Disposition": "attachment; filename=export-tasks.csv"},
+            )
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

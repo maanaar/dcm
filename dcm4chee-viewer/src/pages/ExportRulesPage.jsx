@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  fetchExporters, createExporter,
+  fetchExporters, createExporter, deleteExporter,
   fetchExportRules, createExportRule, deleteExportRule,
   fetchExportTasks,
+  fetchExportTaskList, countExportTasksFiltered,
+  cancelExportTasks, rescheduleExportTasks, deleteExportTasks,
+  getExportTasksCSVUrl,
   fetchApplicationEntities, fetchDevices,
 } from '../services/dcmchee';
 
@@ -70,6 +73,14 @@ function ExportersTab({ aeTitles, deviceNames }) {
     finally     { setSaving(false); }
   };
 
+  const handleDelete = async (exp) => {
+    if (!window.confirm(`Delete exporter "${exp.exporterID}"?`)) return;
+    try {
+      await deleteExporter(exp.exporterID, exp.deviceName);
+      setExporters(prev => prev.filter(e => !(e.exporterID === exp.exporterID && e.deviceName === exp.deviceName)));
+    } catch (e) { alert(`Delete failed: ${e.message}`); }
+  };
+
   const filtered = exporters.filter(e => {
     const s = search.toLowerCase();
     return (e.exporterID || '').toLowerCase().includes(s) ||
@@ -133,7 +144,7 @@ function ExportersTab({ aeTitles, deviceNames }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#0a6e79] text-white text-left">
-                  {['#','Exporter ID','Device','AE Title','URI','Queue','Storage','Status'].map(h => (
+                  {['#','Exporter ID','Device','AE Title','URI','Queue','Storage','Status',''].map(h => (
                     <th key={h} className="px-4 py-3 font-semibold">{h}</th>
                   ))}
                 </tr>
@@ -156,6 +167,12 @@ function ExportersTab({ aeTitles, deviceNames }) {
                       <span className={statusBadge(exp.status)}>
                         {(exp.status || 'active').charAt(0).toUpperCase() + (exp.status || 'active').slice(1)}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => handleDelete(exp)}
+                        className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition">
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -233,6 +250,10 @@ function ExportersTab({ aeTitles, deviceNames }) {
                     <div className="flex-1"><span className="text-gray-500 text-xs uppercase">Storage</span><p className="text-gray-700">{exp.storageID || '—'}</p></div>
                   </div>
                 </div>
+                <button onClick={() => handleDelete(exp)}
+                  className="mt-3 px-3 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition">
+                  Delete
+                </button>
               </div>
             ))}
 
@@ -579,10 +600,270 @@ function ExportRulesTab({ aeTitles, deviceNames, exporterIDs }) {
   );
 }
 
+// ── Monitoring tab ────────────────────────────────────────────────────────────
+const BLANK_FILTER = {
+  exporterID: '', deviceName: '', status: '', studyInstanceUID: '',
+  batchID: '', createdTime: '', updatedTime: '',
+};
+const STATUSES_FILTER = ['', 'SCHEDULED', 'IN PROCESS', 'COMPLETED', 'WARNING', 'FAILED', 'CANCELED'];
+
+function MonitoringTab({ exporterIDs, deviceNames }) {
+  const [filters,       setFilters]       = useState(BLANK_FILTER);
+  const [limit,         setLimit]         = useState(20);
+  const [tasks,         setTasks]         = useState([]);
+  const [totalCount,    setTotalCount]    = useState(null);
+  const [loading,       setLoading]       = useState(false);
+  const [countLoading,  setCountLoading]  = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error,         setError]         = useState(null);
+  const [autoRefresh,   setAutoRefresh]   = useState(false);
+  const [interval,      setInterval_]     = useState(10);
+  const timerRef = useRef(null);
+
+  const buildFilters = () => ({ ...filters, limit });
+
+  const loadTasks = async () => {
+    setLoading(true); setError(null);
+    try { setTasks(await fetchExportTaskList(buildFilters())); }
+    catch (e) { setError(e.message); }
+    finally   { setLoading(false); }
+  };
+
+  const handleCount = async () => {
+    setCountLoading(true); setTotalCount(null);
+    try { const r = await countExportTasksFiltered(filters); setTotalCount(r.count ?? 0); }
+    catch (e) { setError(e.message); }
+    finally   { setCountLoading(false); }
+  };
+
+  const handleAction = async (action) => {
+    const label = action === 'cancel' ? 'Cancel' : action === 'reschedule' ? 'Reschedule' : 'Delete';
+    if (!window.confirm(`${label} all matching tasks?`)) return;
+    setActionLoading(true); setError(null);
+    try {
+      if (action === 'cancel')      await cancelExportTasks(filters);
+      else if (action === 'reschedule') await rescheduleExportTasks(filters);
+      else if (action === 'delete') await deleteExportTasks(filters);
+      await loadTasks();
+    } catch (e) { setError(e.message); }
+    finally     { setActionLoading(false); }
+  };
+
+  // auto-refresh
+  useEffect(() => {
+    if (autoRefresh) {
+      timerRef.current = window.setInterval(loadTasks, interval * 1000);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [autoRefresh, interval, filters, limit]);
+
+  const statusColor = (s) => {
+    if (!s) return 'bg-gray-100 text-gray-500';
+    const m = {
+      'SCHEDULED': 'bg-blue-100 text-blue-700',
+      'IN PROCESS': 'bg-yellow-100 text-yellow-700',
+      'COMPLETED': 'bg-green-100 text-green-700',
+      'WARNING': 'bg-orange-100 text-orange-700',
+      'FAILED': 'bg-red-100 text-red-700',
+      'CANCELED': 'bg-gray-100 text-gray-500',
+    };
+    return m[s] || 'bg-gray-100 text-gray-600';
+  };
+
+  const fmt = (v) => v ? new Date(v).toLocaleString() : '—';
+
+  return (
+    <div>
+      {/* Filter bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mb-4 p-4 bg-[#00768308] border border-gray-200 rounded-xl">
+        <div>
+          <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Exporter ID</label>
+          <select className={sel} value={filters.exporterID}
+            onChange={e => setFilters(p => ({ ...p, exporterID: e.target.value }))}>
+            <option value="">All</option>
+            {exporterIDs.map(id => <option key={id} value={id}>{id}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Device Name</label>
+          <select className={sel} value={filters.deviceName}
+            onChange={e => setFilters(p => ({ ...p, deviceName: e.target.value }))}>
+            <option value="">All</option>
+            {deviceNames.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Status</label>
+          <select className={sel} value={filters.status}
+            onChange={e => setFilters(p => ({ ...p, status: e.target.value }))}>
+            {STATUSES_FILTER.map(s => <option key={s} value={s}>{s || 'All'}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Limit</label>
+          <select className={sel} value={limit} onChange={e => setLimit(Number(e.target.value))}>
+            {[10, 20, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Study Instance UID</label>
+          <input className={inp} placeholder="1.2.840…" value={filters.studyInstanceUID}
+            onChange={e => setFilters(p => ({ ...p, studyInstanceUID: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Batch ID</label>
+          <input className={inp} placeholder="batch-id" value={filters.batchID}
+            onChange={e => setFilters(p => ({ ...p, batchID: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Created Date</label>
+          <input type="date" className={inp} value={filters.createdTime}
+            onChange={e => setFilters(p => ({ ...p, createdTime: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 uppercase font-medium block mb-1">Updated Date</label>
+          <input type="date" className={inp} value={filters.updatedTime}
+            onChange={e => setFilters(p => ({ ...p, updatedTime: e.target.value }))} />
+        </div>
+      </div>
+
+      {/* Action bar */}
+      <div className="flex flex-wrap gap-2 mb-4 items-center">
+        <button onClick={handleCount} disabled={countLoading}
+          className="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-2xl font-semibold text-sm transition disabled:opacity-50">
+          {countLoading ? 'Counting…' : 'COUNT'}
+          {totalCount !== null && !countLoading && <span className="ml-2 text-[#0a6e79] font-bold">{totalCount}</span>}
+        </button>
+        <button onClick={loadTasks} disabled={loading}
+          className="px-5 py-2 bg-[#0a6e79] hover:bg-[#1E7586] text-white rounded-2xl font-semibold text-sm transition disabled:opacity-50">
+          {loading ? 'Loading…' : 'SUBMIT'}
+        </button>
+
+        {/* All actions dropdown */}
+        <div className="relative group">
+          <button disabled={actionLoading}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-semibold text-sm transition disabled:opacity-50 flex items-center gap-1">
+            {actionLoading ? 'Working…' : 'All actions'} <i className="fa-solid fa-chevron-down text-xs" />
+          </button>
+          <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[160px] hidden group-hover:block">
+            <button onClick={() => handleAction('reschedule')}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700 rounded-t-xl">
+              Reschedule All
+            </button>
+            <button onClick={() => handleAction('cancel')}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-orange-600">
+              Cancel All
+            </button>
+            <button onClick={() => handleAction('delete')}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600 rounded-b-xl">
+              Delete All
+            </button>
+          </div>
+        </div>
+
+        {/* CSV download */}
+        <a href={getExportTasksCSVUrl(filters)} download="export-tasks.csv"
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-semibold text-sm transition flex items-center gap-1">
+          <i className="fa-solid fa-download text-xs" /> CSV
+        </a>
+
+        {/* Auto refresh */}
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-xs text-gray-500">Interval:</span>
+          <select className="text-xs border border-gray-300 rounded-lg px-2 py-1 outline-none"
+            value={interval} onChange={e => setInterval_(Number(e.target.value))}>
+            {[5, 10, 30, 60].map(n => <option key={n} value={n}>{n}s</option>)}
+          </select>
+          <button onClick={() => setAutoRefresh(p => !p)}
+            className={`px-4 py-1.5 rounded-2xl text-sm font-semibold transition flex items-center gap-1 ${
+              autoRefresh
+                ? 'bg-[#0a6e79] text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+            }`}>
+            <i className={`fa-solid fa-rotate text-xs ${autoRefresh ? 'animate-spin' : ''}`} />
+            {autoRefresh ? 'Auto Refreshing' : 'Start Auto Refresh'}
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>}
+
+      {/* Task table */}
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#0a6e79]" />
+          <p className="mt-4 text-gray-600">Loading tasks…</p>
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="text-center py-10">
+          <div className="text-5xl mb-3">📋</div>
+          <p className="text-gray-500 text-sm">No tasks found. Adjust filters and press SUBMIT.</p>
+        </div>
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-gray-500">{tasks.length} task{tasks.length !== 1 ? 's' : ''}</p>
+          {/* Desktop */}
+          <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-[#0a6e79] text-white text-left">
+                  {['#','Exporter ID','Device','Study UID','Instances','Status','Created','Updated','Outcome'].map(h => (
+                    <th key={h} className="px-3 py-3 font-semibold whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map((t, idx) => (
+                  <tr key={t.pk || idx} className={`border-t border-gray-100 hover:bg-[#00768308] ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                    <td className="px-3 py-2 text-gray-400">{idx + 1}</td>
+                    <td className="px-3 py-2 font-semibold text-[#0a6e79]">{t.exporterID || '—'}</td>
+                    <td className="px-3 py-2 text-gray-600">{t.deviceName || '—'}</td>
+                    <td className="px-3 py-2 text-gray-500 max-w-[180px] truncate" title={t.studyInstanceUID}>{t.studyInstanceUID || '—'}</td>
+                    <td className="px-3 py-2 text-gray-600 text-center">{t.numberOfInstances ?? '—'}</td>
+                    <td className="px-3 py-2">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(t.status)}`}>{t.status || '—'}</span>
+                    </td>
+                    <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{fmt(t.createdTime)}</td>
+                    <td className="px-3 py-2 text-gray-500 whitespace-nowrap">{fmt(t.updatedTime)}</td>
+                    <td className="px-3 py-2 text-gray-500 max-w-[140px] truncate" title={t.outcomeMessage}>{t.outcomeMessage || t.errorMessage || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {tasks.map((t, idx) => (
+              <div key={t.pk || idx} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold text-[#0a6e79] text-sm">{t.exporterID || `Task #${idx + 1}`}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(t.status)}`}>{t.status || '—'}</span>
+                </div>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div><span className="text-gray-400 uppercase">Device: </span>{t.deviceName || '—'}</div>
+                  <div><span className="text-gray-400 uppercase">Study UID: </span><span className="break-all">{t.studyInstanceUID || '—'}</span></div>
+                  <div className="flex gap-4">
+                    <span><span className="text-gray-400 uppercase">Instances: </span>{t.numberOfInstances ?? '—'}</span>
+                    <span><span className="text-gray-400 uppercase">Created: </span>{fmt(t.createdTime)}</span>
+                  </div>
+                  {(t.outcomeMessage || t.errorMessage) && (
+                    <div><span className="text-gray-400 uppercase">Outcome: </span>{t.outcomeMessage || t.errorMessage}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Page shell ───────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'exporters', label: 'Exporters', icon: 'fa-solid fa-upload' },
-  { id: 'rules',     label: 'Export Rules', icon: 'fa-solid fa-clipboard-list' },
+  { id: 'exporters', label: 'Exporters',     icon: 'fa-solid fa-upload' },
+  { id: 'rules',     label: 'Export Rules',  icon: 'fa-solid fa-clipboard-list' },
+  { id: 'monitor',   label: 'Monitoring',    icon: 'fa-solid fa-chart-line' },
 ];
 
 export default function ExportRulesPage() {
@@ -644,6 +925,7 @@ export default function ExportRulesPage() {
         <div className="p-4 sm:p-6">
           {tab === 'exporters' && <ExportersTab aeTitles={aeTitles} deviceNames={deviceNames} />}
           {tab === 'rules'     && <ExportRulesTab aeTitles={aeTitles} deviceNames={deviceNames} exporterIDs={exporterIDs} />}
+          {tab === 'monitor'   && <MonitoringTab exporterIDs={exporterIDs} deviceNames={deviceNames} />}
         </div>
       </div>
     </div>
