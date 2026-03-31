@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 # ── shared state ─────────────────────────────────────────────────────────────
 from app_state import (
-    DCM4CHEE_URL,
+    curalink4CHEE_URL,
     DEFAULT_WEBAPP,
     GEMINI_API_KEY,
     GEMINI_MODEL,
@@ -57,15 +57,15 @@ async def quick_search(q: str = "", webAppService: str = DEFAULT_WEBAPP):
         return {"patients": [], "studies": []}
     try:
         token    = await get_token()
-        dcm_path = get_webapp_path(webAppService)
+        curalink_path = get_webapp_path(webAppService)
         headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
         term     = q.strip()
 
         pat_resp, pid_resp, st_resp = await asyncio.gather(
-            client.get(f"{DCM4CHEE_URL}{dcm_path}/patients?limit=8&fuzzymatching=true&PatientName={term}", headers=headers),
-            client.get(f"{DCM4CHEE_URL}{dcm_path}/patients?limit=8&PatientID={term}*", headers=headers),
+            client.get(f"{curalink4CHEE_URL}{curalink_path}/patients?limit=8&fuzzymatching=true&PatientName={term}", headers=headers),
+            client.get(f"{curalink4CHEE_URL}{curalink_path}/patients?limit=8&PatientID={term}*", headers=headers),
             client.get(
-                f"{DCM4CHEE_URL}{dcm_path}/studies?limit=8&fuzzymatching=true&PatientName={term}"
+                f"{curalink4CHEE_URL}{curalink_path}/studies?limit=8&fuzzymatching=true&PatientName={term}"
                 "&includefield=00100010,00100020,00080020,00080061,00081030,0020000D",
                 headers=headers,
             ),
@@ -120,7 +120,7 @@ async def smart_search(request: Request):
     context_parts: List[str] = []
     try:
         token    = await get_token()
-        dcm_path = get_webapp_path(DEFAULT_WEBAPP)
+        curalink_path = get_webapp_path(DEFAULT_WEBAPP)
         headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
         q_lower  = question.lower()
 
@@ -141,7 +141,7 @@ async def smart_search(request: Request):
         # Recent studies if asked
         if any(w in q_lower for w in ("study", "studies", "scan", "recent", "last", "latest", "exam")):
             st = await client.get(
-                f"{DCM4CHEE_URL}{dcm_path}/studies?limit=10&orderby=-StudyDate"
+                f"{curalink4CHEE_URL}{curalink_path}/studies?limit=10&orderby=-StudyDate"
                 "&includefield=00080061,00100010,00100020,00080020,00081030",
                 headers=headers,
             )
@@ -158,7 +158,7 @@ async def smart_search(request: Request):
         # Patient lookup if mentioned
         if any(w in q_lower for w in ("patient", "name", "id", "who", "find")):
             pr = await client.get(
-                f"{DCM4CHEE_URL}{dcm_path}/patients?limit=15&fuzzymatching=true",
+                f"{curalink4CHEE_URL}{curalink_path}/patients?limit=15&fuzzymatching=true",
                 headers=headers,
             )
             if pr.status_code == 200:
@@ -174,7 +174,7 @@ async def smart_search(request: Request):
         # Modalities if asked
         if any(w in q_lower for w in ("modality", "modalities", "ct", "mr", "mri", "us", "xray", "x-ray", "nm", "pet")):
             mr = await client.get(
-                f"{DCM4CHEE_URL}/dcm4chee-arc/modalities",
+                f"{curalink4CHEE_URL}/curalink4chee-arc/modalities",
                 headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             )
             if mr.status_code == 200:

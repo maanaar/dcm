@@ -12,12 +12,12 @@ from typing import Optional, Dict, List
 
 # ── shared state (config, httpx client, DICOM helpers) ───────────────────────
 from app_state import (
-    DCM4CHEE_URL, client,
+    curalink4CHEE_URL, client,
     get_token, clean_query_params, _gv, _fmt_date,
     _fetch_all_series, fetch_hospitals_cached,
 )
 
-DCM_PATH = f"/dcm4chee-arc/aets/{os.getenv('DEFAULT_WEBAPP', 'DCM4CHEE')}/rs"
+curalink_PATH = f"/curalink4chee-arc/aets/{os.getenv('DEFAULT_WEBAPP', 'curalink4CHEE')}/rs"
 
 app = FastAPI()
 
@@ -57,13 +57,13 @@ async def search_patients(request: Request):
     try:
         token = await get_token()
         query_params = clean_query_params(str(request.url.query))
-        dcm_path = DCM_PATH
+        curalink_path = curalink_PATH
         headers = {"Accept": "application/dicom+json", "Authorization": f"Bearer {token}"}
 
         # If caller already specified a limit, honour it (single request)
         parsed = parse_qs(query_params)
         if "limit" in parsed:
-            url = f"{DCM4CHEE_URL}{dcm_path}/patients"
+            url = f"{curalink4CHEE_URL}{curalink_path}/patients"
             if query_params:
                 url += f"?{query_params}"
             response = await client.get(url, headers=headers)
@@ -79,7 +79,7 @@ async def search_patients(request: Request):
         all_patients: list = []
         offset = 0
         while True:
-            url = f"{DCM4CHEE_URL}{dcm_path}/patients{base_params}limit={page_size}&offset={offset}"
+            url = f"{curalink4CHEE_URL}{curalink_path}/patients{base_params}limit={page_size}&offset={offset}"
             response = await client.get(url, headers=headers)
             if response.status_code == 204:
                 break
@@ -101,8 +101,8 @@ async def search_patients(request: Request):
 async def get_patient_studies(patient_id: str):
     try:
         token = await get_token()
-        dcm_path = DCM_PATH
-        url = f"{DCM4CHEE_URL}{dcm_path}/patients/{patient_id}/studies"
+        curalink_path = curalink_PATH
+        url = f"{curalink4CHEE_URL}{curalink_path}/patients/{patient_id}/studies"
         headers = {"Accept": "application/dicom+json", "Authorization": f"Bearer {token}"}
         response = await client.get(url, headers=headers)
         if response.status_code == 204:
@@ -125,8 +125,8 @@ async def search_studies(request: Request):
     try:
         token = await get_token()
         query_params = clean_query_params(str(request.url.query))
-        dcm_path = DCM_PATH
-        url = f"{DCM4CHEE_URL}{dcm_path}/studies"
+        curalink_path = curalink_PATH
+        url = f"{curalink4CHEE_URL}{curalink_path}/studies"
         if query_params:
             url += f"?{query_params}"
         headers = {"Accept": "application/dicom+json", "Authorization": f"Bearer {token}"}
@@ -151,8 +151,8 @@ async def search_mwl(request: Request):
     try:
         token = await get_token()
         query_params = clean_query_params(str(request.url.query))
-        dcm_path = DCM_PATH
-        url = f"{DCM4CHEE_URL}{dcm_path}/mwlitems"
+        curalink_path = curalink_PATH
+        url = f"{curalink4CHEE_URL}{curalink_path}/mwlitems"
         if query_params:
             url += f"?{query_params}"
         headers = {"Accept": "application/dicom+json", "Authorization": f"Bearer {token}"}
@@ -248,11 +248,11 @@ async def get_dashboard_stats():
     try:
         token    = await get_token()
         headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
-        dcm_path = DCM_PATH
+        curalink_path = curalink_PATH
 
         # Fetch recent studies for modality breakdown, series/instance counts, recent-studies widget
         recent_resp = await client.get(
-            f"{DCM4CHEE_URL}{dcm_path}/studies?limit=200&orderby=-StudyDate"
+            f"{curalink4CHEE_URL}{curalink_path}/studies?limit=200&orderby=-StudyDate"
             "&includefield=00080061,00100020,00080020,00081030,00080050,00201206,00201208",
             headers=headers,
         )
@@ -281,7 +281,7 @@ async def get_hospital_dashboard(hospital_id: str):
     try:
         token    = await get_token()
         headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
-        dcm_path = DCM_PATH
+        curalink_path = curalink_PATH
 
         # Get the institution name for this hospital_id
         hospitals = await list_hospitals()
@@ -301,7 +301,7 @@ async def get_hospital_dashboard(hospital_id: str):
             query += f"&InstitutionName={institution_name}"
 
         studies_resp = await client.get(
-            f"{DCM4CHEE_URL}{dcm_path}/studies?{query}",
+            f"{curalink4CHEE_URL}{curalink_path}/studies?{query}",
             headers=headers,
         )
         studies_raw: list = []
@@ -312,12 +312,12 @@ async def get_hospital_dashboard(hospital_id: str):
         # fetch all studies and filter client-side using series InstitutionName map
         if not studies_raw and institution_name and institution_name != "Unknown":
             all_studies_resp = await client.get(
-                f"{DCM4CHEE_URL}{dcm_path}/studies?limit=2000&orderby=-StudyDate"
+                f"{curalink4CHEE_URL}{curalink_path}/studies?limit=2000&orderby=-StudyDate"
                 "&includefield=00080080,00080061,00100020,00080020,00081030,00080050,00201206,00201208",
                 headers=headers,
             )
             all_studies = all_studies_resp.json() if all_studies_resp.status_code == 200 else []
-            series_list = await _fetch_all_series(token, dcm_path)
+            series_list = await _fetch_all_series(token, curalink_path)
             uid_to_inst = {
                 _gv(s, "0020000D"): _gv(s, "00080080") or ""
                 for s in series_list
@@ -353,8 +353,8 @@ async def search_series(request: Request):
     try:
         token = await get_token()
         query_params = clean_query_params(str(request.url.query))
-        dcm_path = DCM_PATH
-        url = f"{DCM4CHEE_URL}{dcm_path}/series"
+        curalink_path = curalink_PATH
+        url = f"{curalink4CHEE_URL}{curalink_path}/series"
         if query_params:
             url += f"?{query_params}"
         headers = {"Accept": "application/dicom+json", "Authorization": f"Bearer {token}"}
@@ -378,7 +378,7 @@ async def search_series(request: Request):
 async def list_devices():
     try:
         token = await get_token()
-        url = f"{DCM4CHEE_URL}/dcm4chee-arc/devices"
+        url = f"{curalink4CHEE_URL}/curalink4chee-arc/devices"
         headers = {"Authorization": f"Bearer {token}"}
         response = await client.get(url, headers=headers)
         if response.status_code != 200:
@@ -394,7 +394,7 @@ async def list_devices():
 async def get_device(device_name: str):
     try:
         token = await get_token()
-        url = f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{device_name}"
+        url = f"{curalink4CHEE_URL}/curalink4chee-arc/devices/{device_name}"
         headers = {"Authorization": f"Bearer {token}"}
         response = await client.get(url, headers=headers)
         if response.status_code != 200:
@@ -412,7 +412,7 @@ async def get_device(device_name: str):
 
 async def _get_device_config(token: str, device_name: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
-    resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{device_name}", headers=headers)
+    resp = await client.get(f"{curalink4CHEE_URL}/curalink4chee-arc/devices/{device_name}", headers=headers)
     return resp.json() if resp.status_code == 200 else {}
 
 
@@ -434,13 +434,13 @@ async def _find_ae_in_devices(token: str, local_ae: str, device_names: list):
 
 @app.post("/api/routing-rules")
 async def create_routing_rule(request: Request):
-    """Add a dcmForwardRule to the device that owns the given localAETitle."""
+    """Add a curalinkForwardRule to the device that owns the given localAETitle."""
     try:
         body = await request.json()
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}"}
 
-        devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+        devices_resp = await client.get(f"{curalink4CHEE_URL}/curalink4chee-arc/devices", headers=headers)
         if devices_resp.status_code != 200:
             raise HTTPException(status_code=500, detail="Could not fetch devices")
         device_names = [
@@ -448,15 +448,15 @@ async def create_routing_rule(request: Request):
             for d in (devices_resp.json() or [])
         ]
 
-        local_ae = body.get("localAETitle", "DCM4CHEE")
+        local_ae = body.get("localAETitle", "curalink4CHEE")
         dev_name, config, ae_idx = await _find_ae_in_devices(token, local_ae, device_names)
         if dev_name is None:
             raise HTTPException(status_code=404, detail=f"AE '{local_ae}' not found in any device")
 
         ae = config["dicomNetworkAE"][ae_idx]
         local_ae = ae.get("dicomAETitle", local_ae)
-        dcm_ae = ae.setdefault("dcmNetworkAE", {})
-        existing = dcm_ae.setdefault("dcmForwardRule", [])
+        curalink_ae = ae.setdefault("curalinkNetworkAE", {})
+        existing = curalink_ae.setdefault("curalinkForwardRule", [])
 
         rule_cn = body.get("cn") or f"forward-rule-{len(existing) + 1}"
         new_rule: Dict = {"cn": rule_cn}
@@ -465,25 +465,25 @@ async def create_routing_rule(request: Request):
             new_rule["dicomDescription"] = body["description"]
         src = [s.strip() for s in body.get("sourceAETitle", "").split(",") if s.strip()]
         if src:
-            new_rule["dcmForwardRuleSCUAETitle"] = src
+            new_rule["curalinkForwardRuleSCUAETitle"] = src
         dst = [s.strip() for s in body.get("destAETitle", "").split(",") if s.strip()]
         if dst:
-            new_rule["dcmDestinationAETitle"] = dst
+            new_rule["curalinkDestinationAETitle"] = dst
         props = [s.strip() for s in body.get("bind", "").split(",") if s.strip()]
         if props:
-            new_rule["dcmProperty"] = props
+            new_rule["curalinkProperty"] = props
         if body.get("queueName"):
-            new_rule["dcmQueueName"] = body["queueName"]
+            new_rule["curalinkQueueName"] = body["queueName"]
         try:
             if body.get("priority") not in (None, ""):
-                new_rule["dcmRulePriority"] = int(body["priority"])
+                new_rule["curalinkRulePriority"] = int(body["priority"])
         except (ValueError, TypeError):
             pass
 
         existing.append(new_rule)
 
         put_resp = await client.put(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{dev_name}",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/devices/{dev_name}",
             json=config,
             headers={**headers, "Content-Type": "application/json"},
         )
@@ -499,13 +499,13 @@ async def create_routing_rule(request: Request):
 
 @app.post("/api/transform-rules")
 async def create_transform_rule(request: Request):
-    """Add a dcmCoercionRule to the device that owns the given localAETitle."""
+    """Add a curalinkCoercionRule to the device that owns the given localAETitle."""
     try:
         body = await request.json()
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}"}
 
-        devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+        devices_resp = await client.get(f"{curalink4CHEE_URL}/curalink4chee-arc/devices", headers=headers)
         if devices_resp.status_code != 200:
             raise HTTPException(status_code=500, detail="Could not fetch devices")
         device_names = [
@@ -513,15 +513,15 @@ async def create_transform_rule(request: Request):
             for d in (devices_resp.json() or [])
         ]
 
-        local_ae = body.get("localAETitle", "DCM4CHEE")
+        local_ae = body.get("localAETitle", "curalink4CHEE")
         dev_name, config, ae_idx = await _find_ae_in_devices(token, local_ae, device_names)
         if dev_name is None:
             raise HTTPException(status_code=404, detail=f"AE '{local_ae}' not found in any device")
 
         ae = config["dicomNetworkAE"][ae_idx]
         local_ae = ae.get("dicomAETitle", local_ae)
-        dcm_ae = ae.setdefault("dcmNetworkAE", {})
-        existing = dcm_ae.setdefault("dcmCoercionRule", [])
+        curalink_ae = ae.setdefault("curalinkNetworkAE", {})
+        existing = curalink_ae.setdefault("curalinkCoercionRule", [])
 
         rule_cn = body.get("cn") or f"coercion-rule-{len(existing) + 1}"
         new_rule: Dict = {"cn": rule_cn}
@@ -529,21 +529,21 @@ async def create_transform_rule(request: Request):
         if body.get("description"):
             new_rule["dicomDescription"] = body["description"]
         if body.get("sourceAE"):
-            new_rule["dcmCoercionAETitlePattern"] = body["sourceAE"]
+            new_rule["curalinkCoercionAETitlePattern"] = body["sourceAE"]
         if body.get("target"):
-            new_rule["dcmURI"] = body["target"]
+            new_rule["curalinkURI"] = body["target"]
         if body.get("gateway"):
-            new_rule["dcmCoercionSuffix"] = body["gateway"]
+            new_rule["curalinkCoercionSuffix"] = body["gateway"]
         try:
             if body.get("priority") not in (None, ""):
-                new_rule["dcmRulePriority"] = int(body["priority"])
+                new_rule["curalinkRulePriority"] = int(body["priority"])
         except (ValueError, TypeError):
             pass
 
         existing.append(new_rule)
 
         put_resp = await client.put(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{dev_name}",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/devices/{dev_name}",
             json=config,
             headers={**headers, "Content-Type": "application/json"},
         )
@@ -562,7 +562,7 @@ async def list_routing_rules():
     try:
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}"}
-        devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+        devices_resp = await client.get(f"{curalink4CHEE_URL}/curalink4chee-arc/devices", headers=headers)
         if devices_resp.status_code != 200:
             return []
         device_names = [
@@ -574,17 +574,17 @@ async def list_routing_rules():
             config = await _get_device_config(token, name)
             for ae in config.get("dicomNetworkAE", []):
                 local_ae = ae.get("dicomAETitle", "")
-                for rule in ae.get("dcmNetworkAE", {}).get("dcmForwardRule", []):
+                for rule in ae.get("curalinkNetworkAE", {}).get("curalinkForwardRule", []):
                     rules.append({
                         "cn":            rule.get("cn", ""),
                         "description":   rule.get("dicomDescription", ""),
                         "deviceName":    name,
                         "localAETitle":  local_ae,
-                        "sourceAETitle": rule.get("dcmForwardRuleSCUAETitle", []),
-                        "destAETitle":   rule.get("dcmDestinationAETitle", []),
-                        "queueName":     rule.get("dcmQueueName", ""),
-                        "bind":          rule.get("dcmProperty", []),
-                        "priority":      rule.get("dcmRulePriority", 0),
+                        "sourceAETitle": rule.get("curalinkForwardRuleSCUAETitle", []),
+                        "destAETitle":   rule.get("curalinkDestinationAETitle", []),
+                        "queueName":     rule.get("curalinkQueueName", ""),
+                        "bind":          rule.get("curalinkProperty", []),
+                        "priority":      rule.get("curalinkRulePriority", 0),
                         "status":        "active",
                     })
         return rules
@@ -598,7 +598,7 @@ async def list_transform_rules():
     try:
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}"}
-        devices_resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+        devices_resp = await client.get(f"{curalink4CHEE_URL}/curalink4chee-arc/devices", headers=headers)
         if devices_resp.status_code != 200:
             return []
         device_names = [
@@ -610,15 +610,15 @@ async def list_transform_rules():
             config = await _get_device_config(token, name)
             for ae in config.get("dicomNetworkAE", []):
                 local_ae = ae.get("dicomAETitle", "")
-                for rule in ae.get("dcmNetworkAE", {}).get("dcmCoercionRule", []):
+                for rule in ae.get("curalinkNetworkAE", {}).get("curalinkCoercionRule", []):
                     rules.append({
                         "cn":           rule.get("cn", ""),
                         "description":  rule.get("dicomDescription", ""),
                         "localAETitle": local_ae,
-                        "sourceAE":     rule.get("dcmCoercionAETitlePattern", ""),
-                        "target":       rule.get("dcmURI", ""),
-                        "gateway":      rule.get("dcmCoercionSuffix", ""),
-                        "priority":     rule.get("dcmRulePriority", 0),
+                        "sourceAE":     rule.get("curalinkCoercionAETitlePattern", ""),
+                        "target":       rule.get("curalinkURI", ""),
+                        "gateway":      rule.get("curalinkCoercionSuffix", ""),
+                        "priority":     rule.get("curalinkRulePriority", 0),
                         "status":       "active",
                     })
         return rules
@@ -637,7 +637,7 @@ async def list_webapps():
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}"}
         response = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/webapps?dcmWebServiceClass=QIDO_RS",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/webapps?curalinkWebServiceClass=QIDO_RS",
             headers=headers,
         )
         if response.status_code != 200:
@@ -653,7 +653,7 @@ async def list_application_entities():
     try:
         token = await get_token()
         response = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/aes",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/aes",
             headers={"Authorization": f"Bearer {token}"},
         )
         if response.status_code != 200:
@@ -670,7 +670,7 @@ async def get_application_entity(aet: str):
     try:
         token = await get_token()
         response = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/aes/{aet}",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/aes/{aet}",
             headers={"Authorization": f"Bearer {token}"},
         )
         if response.status_code != 200:
@@ -687,7 +687,7 @@ async def list_hl7_applications():
     try:
         token = await get_token()
         response = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/hl7apps",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/hl7apps",
             headers={"Authorization": f"Bearer {token}"},
         )
         if response.status_code != 200:
@@ -704,7 +704,7 @@ async def get_hl7_application(hl7_app_name: str):
     try:
         token = await get_token()
         response = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/hl7apps/{hl7_app_name}",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/hl7apps/{hl7_app_name}",
             headers={"Authorization": f"Bearer {token}"},
         )
         if response.status_code != 200:
@@ -725,7 +725,7 @@ async def list_modalities():
     try:
         token = await get_token()
         response = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/modalities",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/modalities",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
         )
         if response.status_code == 200:
@@ -744,11 +744,11 @@ async def list_modalities():
 async def debug_institutions():
     try:
         token    = await get_token()
-        dcm_path = DCM_PATH
+        curalink_path = curalink_PATH
         headers  = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
 
         studies_resp = await client.get(
-            f"{DCM4CHEE_URL}{dcm_path}/studies?limit=50&includefield=00080080",
+            f"{curalink4CHEE_URL}{curalink_path}/studies?limit=50&includefield=00080080",
             headers=headers,
         )
         studies_data = studies_resp.json() if studies_resp.status_code == 200 else []
@@ -759,7 +759,7 @@ async def debug_institutions():
         })
 
         series_resp = await client.get(
-            f"{DCM4CHEE_URL}{dcm_path}/series?limit=50&includefield=00080080",
+            f"{curalink4CHEE_URL}{curalink_path}/series?limit=50&includefield=00080080",
             headers=headers,
         )
         series_data = series_resp.json() if series_resp.status_code == 200 else []
@@ -788,7 +788,7 @@ async def debug_institutions():
 async def _get_all_device_configs(token: str) -> list[tuple[str, dict]]:
     """Return [(device_name, config), ...] for all devices."""
     headers = {"Authorization": f"Bearer {token}"}
-    resp = await client.get(f"{DCM4CHEE_URL}/dcm4chee-arc/devices", headers=headers)
+    resp = await client.get(f"{curalink4CHEE_URL}/curalink4chee-arc/devices", headers=headers)
     if resp.status_code != 200:
         return []
     names = [d["dicomDeviceName"] if isinstance(d, dict) else d for d in (resp.json() or [])]
@@ -805,14 +805,14 @@ async def delete_exporter(exporter_id: str, deviceName: Optional[str] = None):
         for name, config in device_configs:
             if deviceName and name != deviceName:
                 continue
-            archive = config.get("dcmDevice", {}).get("dcmArchiveDevice", {})
-            exporters = archive.get("dcmExporter", [])
-            new_exporters = [e for e in exporters if e.get("dcmExporterID") != exporter_id]
+            archive = config.get("curalinkDevice", {}).get("curalinkArchiveDevice", {})
+            exporters = archive.get("curalinkExporter", [])
+            new_exporters = [e for e in exporters if e.get("curalinkExporterID") != exporter_id]
             if len(new_exporters) == len(exporters):
                 continue
-            archive["dcmExporter"] = new_exporters
+            archive["curalinkExporter"] = new_exporters
             put = await client.put(
-                f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{name}",
+                f"{curalink4CHEE_URL}/curalink4chee-arc/devices/{name}",
                 json=config, headers={**headers, "Content-Type": "application/json"},
             )
             if put.status_code not in (200, 204):
@@ -832,15 +832,15 @@ async def list_exporters():
         device_configs = await _get_all_device_configs(token)
         result = []
         for name, config in device_configs:
-            archive = config.get("dcmDevice", {}).get("dcmArchiveDevice", {})
-            for exp in archive.get("dcmExporter", []):
+            archive = config.get("curalinkDevice", {}).get("curalinkArchiveDevice", {})
+            for exp in archive.get("curalinkExporter", []):
                 result.append({
                     "deviceName":  name,
-                    "exporterID":  exp.get("dcmExporterID", ""),
+                    "exporterID":  exp.get("curalinkExporterID", ""),
                     "aeTitle":     exp.get("dicomAETitle", ""),
-                    "uri":         exp.get("dcmURI", ""),
-                    "queueName":   exp.get("dcmQueueName", ""),
-                    "storageID":   exp.get("dcmExportStorageID", ""),
+                    "uri":         exp.get("curalinkURI", ""),
+                    "queueName":   exp.get("curalinkQueueName", ""),
+                    "storageID":   exp.get("curalinkExportStorageID", ""),
                     "description": exp.get("dicomDescription", ""),
                     "status":      "active",
                 })
@@ -862,26 +862,26 @@ async def create_exporter(request: Request):
             raise HTTPException(status_code=400, detail="No device available")
 
         config = next((c for n, c in device_configs if n == target_device), {})
-        archive = config.setdefault("dcmDevice", {}).setdefault("dcmArchiveDevice", {})
-        exporters = archive.setdefault("dcmExporter", [])
+        archive = config.setdefault("curalinkDevice", {}).setdefault("curalinkArchiveDevice", {})
+        exporters = archive.setdefault("curalinkExporter", [])
 
         new_exp: Dict = {
-            "dcmExporterID": body.get("exporterID", ""),
+            "curalinkExporterID": body.get("exporterID", ""),
             "dicomAETitle":  body.get("aeTitle", ""),
-            "dcmURI":        body.get("uri", ""),
-            "dcmQueueName":  body.get("queueName", "Export1"),
+            "curalinkURI":        body.get("uri", ""),
+            "curalinkQueueName":  body.get("queueName", "Export1"),
         }
-        if body.get("storageID"):   new_exp["dcmExportStorageID"] = body["storageID"]
+        if body.get("storageID"):   new_exp["curalinkExportStorageID"] = body["storageID"]
         if body.get("description"): new_exp["dicomDescription"]   = body["description"]
         exporters.append(new_exp)
 
         put = await client.put(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{target_device}",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/devices/{target_device}",
             json=config, headers={**headers, "Content-Type": "application/json"},
         )
         if put.status_code not in (200, 204):
             raise HTTPException(status_code=put.status_code, detail=put.text)
-        return {"success": True, "exporterID": new_exp["dcmExporterID"], "device": target_device}
+        return {"success": True, "exporterID": new_exp["curalinkExporterID"], "device": target_device}
     except HTTPException:
         raise
     except Exception as e:
@@ -895,17 +895,17 @@ async def list_export_rules():
         device_configs = await _get_all_device_configs(token)
         result = []
         for name, config in device_configs:
-            archive = config.get("dcmDevice", {}).get("dcmArchiveDevice", {})
-            for rule in archive.get("dcmExportRule", []):
+            archive = config.get("curalinkDevice", {}).get("curalinkArchiveDevice", {})
+            for rule in archive.get("curalinkExportRule", []):
                 result.append({
                     "cn":          rule.get("cn", ""),
                     "description": rule.get("dicomDescription", ""),
                     "deviceName":  name,
-                    "exporterID":  rule.get("dcmExporterID", []),
-                    "entity":      rule.get("dcmEntity", ""),
-                    "property":    rule.get("dcmProperty", []),
-                    "schedule":    rule.get("dcmSchedule", []),
-                    "priority":    rule.get("dcmRulePriority", 0),
+                    "exporterID":  rule.get("curalinkExporterID", []),
+                    "entity":      rule.get("curalinkEntity", ""),
+                    "property":    rule.get("curalinkProperty", []),
+                    "schedule":    rule.get("curalinkSchedule", []),
+                    "priority":    rule.get("curalinkRulePriority", 0),
                     "status":      "active",
                 })
         return result
@@ -926,30 +926,30 @@ async def create_export_rule_endpoint(request: Request):
             raise HTTPException(status_code=400, detail="No device available")
 
         config = next((c for n, c in device_configs if n == target_device), {})
-        archive = config.setdefault("dcmDevice", {}).setdefault("dcmArchiveDevice", {})
-        rules = archive.setdefault("dcmExportRule", [])
+        archive = config.setdefault("curalinkDevice", {}).setdefault("curalinkArchiveDevice", {})
+        rules = archive.setdefault("curalinkExportRule", [])
 
         rule_cn = body.get("cn") or f"export-rule-{len(rules) + 1}"
         new_rule: Dict = {"cn": rule_cn}
         if body.get("description"): new_rule["dicomDescription"] = body["description"]
-        if body.get("entity"):      new_rule["dcmEntity"]        = body["entity"]
+        if body.get("entity"):      new_rule["curalinkEntity"]        = body["entity"]
 
         exp_ids = [s.strip() for s in body.get("exporterID", "").split(",") if s.strip()]
-        if exp_ids: new_rule["dcmExporterID"] = exp_ids
+        if exp_ids: new_rule["curalinkExporterID"] = exp_ids
 
         props = [s.strip() for s in body.get("property", "").split(",") if s.strip()]
-        if props: new_rule["dcmProperty"] = props
+        if props: new_rule["curalinkProperty"] = props
 
         try:
             if body.get("priority") not in (None, ""):
-                new_rule["dcmRulePriority"] = int(body["priority"])
+                new_rule["curalinkRulePriority"] = int(body["priority"])
         except (ValueError, TypeError):
             pass
 
         rules.append(new_rule)
 
         put = await client.put(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{target_device}",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/devices/{target_device}",
             json=config, headers={**headers, "Content-Type": "application/json"},
         )
         if put.status_code not in (200, 204):
@@ -971,14 +971,14 @@ async def delete_export_rule(rule_cn: str, deviceName: Optional[str] = None):
         for name, config in device_configs:
             if deviceName and name != deviceName:
                 continue
-            archive = config.get("dcmDevice", {}).get("dcmArchiveDevice", {})
-            rules = archive.get("dcmExportRule", [])
+            archive = config.get("curalinkDevice", {}).get("curalinkArchiveDevice", {})
+            rules = archive.get("curalinkExportRule", [])
             new_rules = [r for r in rules if r.get("cn") != rule_cn]
             if len(new_rules) == len(rules):
                 continue
-            archive["dcmExportRule"] = new_rules
+            archive["curalinkExportRule"] = new_rules
             put = await client.put(
-                f"{DCM4CHEE_URL}/dcm4chee-arc/devices/{name}",
+                f"{curalink4CHEE_URL}/curalink4chee-arc/devices/{name}",
                 json=config, headers={**headers, "Content-Type": "application/json"},
             )
             if put.status_code not in (200, 204):
@@ -994,7 +994,7 @@ async def delete_export_rule(rule_cn: str, deviceName: Optional[str] = None):
 
 @app.get("/api/export-tasks")
 async def list_export_tasks():
-    """Return aggregate export task counts by status from dcm4chee monitoring API."""
+    """Return aggregate export task counts by status from curalink4chee monitoring API."""
     try:
         token = await get_token()
         headers = {"Authorization": f"Bearer {token}"}
@@ -1003,7 +1003,7 @@ async def list_export_tasks():
         async def get_count(status: str) -> int:
             try:
                 resp = await client.get(
-                    f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export/count",
+                    f"{curalink4CHEE_URL}/curalink4chee-arc/monitor/export/count",
                     params={"status": status},
                     headers=headers,
                     timeout=10,
@@ -1047,7 +1047,7 @@ async def list_export_task_items(
         if updatedTime: params["updatedTime"] = updatedTime
         if orderby: params["orderby"] = orderby
         resp = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/monitor/export",
             params=params, headers=headers, timeout=15,
         )
         if resp.status_code == 200:
@@ -1081,7 +1081,7 @@ async def count_export_tasks_filtered(
         if createdTime: params["createdTime"] = createdTime
         if updatedTime: params["updatedTime"] = updatedTime
         resp = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export/count",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/monitor/export/count",
             params=params, headers=headers, timeout=10,
         )
         if resp.status_code == 200:
@@ -1102,7 +1102,7 @@ async def cancel_export_tasks(request: Request):
         headers = {"Authorization": f"Bearer {token}"}
         params = {k: v for k, v in body.items() if v}
         resp = await client.post(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export/cancel",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/monitor/export/cancel",
             params=params, headers=headers, timeout=15,
         )
         if resp.status_code in (200, 204):
@@ -1122,7 +1122,7 @@ async def reschedule_export_tasks(request: Request):
         headers = {"Authorization": f"Bearer {token}"}
         params = {k: v for k, v in body.items() if v}
         resp = await client.post(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export/reschedule",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/monitor/export/reschedule",
             params=params, headers=headers, timeout=15,
         )
         if resp.status_code in (200, 204):
@@ -1156,7 +1156,7 @@ async def delete_export_tasks(
         if createdTime: params["createdTime"] = createdTime
         if updatedTime: params["updatedTime"] = updatedTime
         resp = await client.delete(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/monitor/export",
             params=params, headers=headers, timeout=15,
         )
         if resp.status_code in (200, 204):
@@ -1193,7 +1193,7 @@ async def download_export_tasks_csv(
         if createdTime: params["createdTime"] = createdTime
         if updatedTime: params["updatedTime"] = updatedTime
         resp = await client.get(
-            f"{DCM4CHEE_URL}/dcm4chee-arc/monitor/export",
+            f"{curalink4CHEE_URL}/curalink4chee-arc/monitor/export",
             params=params, headers=headers, timeout=30,
         )
         if resp.status_code == 200:
@@ -1443,7 +1443,7 @@ async def list_roles():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "dcm4chee-arc"}
+    return {"status": "ok", "service": "curalink4chee-arc"}
 
 
 if __name__ == "__main__":

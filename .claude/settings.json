@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /c/Users/PC/Documents/curalink/*.db)",
+      "Bash(python -c \"import sqlite3, uuid, hashlib, json; DB_PATH=''curalink_users.db''; print\\(''DB check ok''\\)\")"
+    ]
+  }
+}
