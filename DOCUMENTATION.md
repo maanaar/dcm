@@ -1,6 +1,6 @@
 # CuraLink — Complete Project Documentation
 
-> A full-stack DICOM archive management and viewer system built on top of dcm4chee-arc, with AI-powered smart search.
+> A full-stack DICOM archive management and viewer system built on top of curalink4chee-arc, with AI-powered smart search.
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 1. Project Overview
 
-**CuraLink** is a web-based DICOM archive management dashboard that acts as a unified interface over a [dcm4chee-arc](https://github.com/dcm4che/dcm4chee-arc-light) installation. It provides:
+**CuraLink** is a web-based DICOM archive management dashboard that acts as a unified interface over a [curalink4chee-arc](https://github.com/curalink4che/curalink4chee-arc-light) installation. It provides:
 
 - Hospital/institution dashboards grouped by DICOM `InstitutionName`
 - Patient and study search with fuzzy matching
@@ -49,7 +49,7 @@ Nginx (HTTPS :443)
    │                                    ├── Keycloak (HTTPS :8843)  ← Auth tokens
    │                                    │     (172.16.16.221)
    │                                    │
-   │                                    ├── dcm4chee-arc (HTTP :8080) ← DICOM data
+   │                                    ├── curalink4chee-arc (HTTP :8080) ← DICOM data
    │                                    │     (172.16.16.221)
    │                                    │
    │                                    ├── SQLite (local file)       ← App users
@@ -63,7 +63,7 @@ Nginx (HTTPS :443)
 
 1. Browser sends all API calls to `/api/*` on the same origin.
 2. Nginx proxies them to FastAPI on `localhost:8000`.
-3. FastAPI authenticates with Keycloak (password grant, cached token) and forwards requests to dcm4chee-arc.
+3. FastAPI authenticates with Keycloak (password grant, cached token) and forwards requests to curalink4chee-arc.
 4. DICOM responses are transformed and returned as clean JSON.
 5. React renders the data.
 
@@ -78,10 +78,10 @@ Nginx (HTTPS :443)
 | **Python** | 3.9 | Runtime language |
 | **FastAPI** | Latest | REST API framework — async, auto-docs, type-safe |
 | **uvicorn** | Latest | ASGI server that runs FastAPI |
-| **httpx** | Latest | Async HTTP client for dcm4chee / Keycloak requests |
+| **httpx** | Latest | Async HTTP client for curalink4chee / Keycloak requests |
 | **LangChain** | Latest (`langchain-core`, `langchain-ollama`) | LLM orchestration framework for AI search |
 | **SQLite** | Built-in (stdlib `sqlite3`) | Local database for CuraLink user accounts |
-| **Keycloak** | Server at `172.16.16.221:8843` | Identity provider — issues tokens for dcm4chee |
+| **Keycloak** | Server at `172.16.16.221:8843` | Identity provider — issues tokens for curalink4chee |
 
 ### Frontend
 
@@ -102,7 +102,7 @@ Nginx (HTTPS :443)
 
 | Technology | Purpose |
 |---|---|
-| **dcm4chee-arc** | DICOM archive — stores studies, series, instances |
+| **curalink4chee-arc** | DICOM archive — stores studies, series, instances |
 | **Keycloak** | OAuth2 / OpenID Connect identity server |
 | **Nginx** | Reverse proxy, SSL termination, static file serving |
 | **Let's Encrypt** | SSL/TLS certificate authority |
@@ -123,7 +123,7 @@ Nginx (HTTPS :443)
 ## 4. Project Structure
 
 ```
-dcm/
+curalink/
 ├── app.py                        # FastAPI app — all route handlers
 ├── app_state.py                  # Shared config, httpx client, helpers
 ├── routers/
@@ -132,7 +132,7 @@ dcm/
 ├── DEPLOYMENT.md                 # Deployment guide
 ├── DOCUMENTATION.md              # This file
 ├── nginx-curalink-updated.conf   # Production Nginx config
-└── dcm4chee-viewer/              # React frontend
+└── curalink4chee-viewer/              # React frontend
     ├── .env                      # Dev env vars
     ├── .env.production           # Prod env vars
     ├── package.json
@@ -145,7 +145,7 @@ dcm/
         ├── config/
         │   └── permissions.js   # Permission IDs, helpers
         ├── services/
-        │   └── dcmchee.js       # All API calls + data transformers
+        │   └── curalinkchee.js       # All API calls + data transformers
         ├── components/
         │   ├── navbar.jsx        # Sidebar navigation (permission-filtered)
         │   ├── FloatingChat.jsx  # Global AI chat widget (bottom-right FAB)
@@ -160,7 +160,7 @@ dcm/
         │   └── Protectedroute.jsx# Route guard wrapper
         └── pages/
             ├── LoginPage.jsx
-            ├── DCMDashboard.jsx
+            ├── curalinkDashboard.jsx
             ├── SmartSearchPage.jsx
             ├── PatientPage.jsx
             ├── studies.jsx
@@ -189,14 +189,14 @@ All configuration, the shared HTTP client, caches, and DICOM helper functions li
 ```python
 # Config (all overridable via env vars)
 KEYCLOAK_URL            = "https://172.16.16.221:8843"
-DCM4CHEE_URL            = "http://172.16.16.221:8080"
-USERNAME                = "root"          # dcm4chee service account
+curalink4CHEE_URL            = "http://172.16.16.221:8080"
+USERNAME                = "root"          # curalink4chee service account
 PASSWORD                = "changeit"
 KEYCLOAK_ADMIN_USERNAME = "admin"         # Keycloak master realm admin
 KEYCLOAK_ADMIN_PASSWORD = "admin"
 OLLAMA_URL              = "http://localhost:11434"
 OLLAMA_MODEL            = "qwen2.5"
-DEFAULT_WEBAPP          = "DCM4CHEE"
+DEFAULT_WEBAPP          = "curalink4CHEE"
 
 # Shared HTTP client (one instance, SSL verification disabled for self-signed certs)
 client = httpx.AsyncClient(verify=False, timeout=30.0)
@@ -211,7 +211,7 @@ _hospitals_cache  # Institution list (TTL: 5 minutes)
 | Function | Description |
 |---|---|
 | `get_token()` | Fetches/caches a Keycloak bearer token via password grant |
-| `get_webapp_path(webapp)` | Returns `/dcm4chee-arc/aets/{webapp}/rs` |
+| `get_webapp_path(webapp)` | Returns `/curalink4chee-arc/aets/{webapp}/rs` |
 | `clean_query_params(qs)` | Strips internal params (e.g. `webAppService`) before forwarding |
 | `_gv(obj, tag, idx)` | Extracts a value from a DICOM JSON object by tag (e.g. `"00100010"`) |
 | `_fmt_date(raw)` | Converts `YYYYMMDD` → `YYYY-MM-DD` |
@@ -225,7 +225,7 @@ _hospitals_cache  # Institution list (TTL: 5 minutes)
 `app.py` only contains route handlers. It imports all shared state from `app_state.py` and includes the smart search router.
 
 ```python
-from app_state import (DCM4CHEE_URL, DEFAULT_WEBAPP, client, get_token, ...)
+from app_state import (curalink4CHEE_URL, DEFAULT_WEBAPP, client, get_token, ...)
 from routers.smart_search import router as smart_search_router
 
 app = FastAPI()
@@ -248,7 +248,7 @@ Deduplicates results and returns top 8 of each.
 **`POST /api/smart-search`**
 
 1. Reads the question and prior chat history from the request body.
-2. Builds a context string from live dcm4chee data based on keywords in the question:
+2. Builds a context string from live curalink4chee data based on keywords in the question:
    - Always: institution summary (name, studies count, patients count)
    - If question mentions "study/scan/recent": fetch 10 most recent studies
    - If question mentions "patient/find/who": fetch recent patients list
@@ -275,7 +275,7 @@ Uses React Router v6 with lazy loading for all pages. Two route guard components
 | Path | Component | Guard |
 |---|---|---|
 | `/login` | LoginPage | None |
-| `/dashboard` | DCMDashboard | `dashboard` permission |
+| `/dashboard` | curalinkDashboard | `dashboard` permission |
 | `/hospital/:id` | singleHospital | `dashboard` permission |
 | `/smart-search` | SmartSearchPage | None |
 | `/patients` | PatientPage | `patients` permission |
@@ -298,7 +298,7 @@ Uses React Router v6 with lazy loading for all pages. Two route guard components
 - "Remember me" checkbox (stores credentials in localStorage)
 - **"Continue as Demo"** button — bypasses auth, sets all non-admin permissions, `authMode: demo`
 
-#### `DCMDashboard.jsx`
+#### `curalinkDashboard.jsx`
 Main overview page. Loads two data sources in parallel:
 - `/api/dashboard` — recent studies for modality chart and series/instance counts
 - `/api/hospitals` — institution cards with patient/study counts
@@ -330,15 +330,15 @@ Three-tab interface:
 - **Export Tasks tab:** Live view of export task counts by status (Scheduled, In Process, Completed, Warning, Failed, Canceled)
 
 #### `RoutingRolesPage.jsx`
-Manage `dcmForwardRule` entries in dcm4chee device config:
+Manage `curalinkForwardRule` entries in curalink4chee device config:
 - Table columns: Name, Description, Device, Local AE, Source AEs, Destination AEs, Queue, Property Filter, Priority, Status
-- Inline add row with dropdowns populated from live dcm4chee data:
+- Inline add row with dropdowns populated from live curalink4chee data:
   - Device: `<select>` from `/api/devices`
   - Local AE: `<select>` from `/api/aes`
   - Source/Dest AEs: `<input list>` with datalist (autocomplete)
 
 #### `TransformRulesPage.jsx`
-Manages `dcmCoercionRule` entries — same pattern as routing rules but for DICOM attribute modification during transfer:
+Manages `curalinkCoercionRule` entries — same pattern as routing rules but for DICOM attribute modification during transfer:
 - Fields: Name, Description, Device, Local AE, Source AE pattern, Target URI (XSL file path), Gateway, Priority
 
 ### Components
@@ -359,7 +359,7 @@ Collapsible sidebar with permission-filtered sections:
 - Configuration → Devices, AEs, HL7, Routing, Transform, Export Rules
 - Administration (admin only) → Users
 
-### Services (`dcmchee.js`)
+### Services (`curalinkchee.js`)
 
 Single API client file. Base URL from `import.meta.env.VITE_API_BASE`.
 
@@ -384,7 +384,7 @@ User types question
 POST /api/smart-search
         │
         ├── Detect keywords in question
-        │       "study/scan"  → fetch 10 recent studies from dcm4chee
+        │       "study/scan"  → fetch 10 recent studies from curalink4chee
         │       "patient/who" → fetch recent patients list
         │       "modality/CT" → fetch modality list
         │       Always        → fetch institution summary
@@ -472,9 +472,9 @@ Bypasses the API entirely. Sets `authMode: demo`, grants all non-admin permissio
 
 Admin users bypass all permission checks and also see the Users admin page.
 
-### Keycloak token (dcm4chee access)
+### Keycloak token (curalink4chee access)
 
-The backend uses its own service account (`root`/`changeit`) to talk to dcm4chee-arc. It fetches a Keycloak token once and caches it for 80% of its lifetime (default: ~4 minutes). This token is attached as `Authorization: Bearer <token>` on every dcm4chee request.
+The backend uses its own service account (`root`/`changeit`) to talk to curalink4chee-arc. It fetches a Keycloak token once and caches it for 80% of its lifetime (default: ~4 minutes). This token is attached as `Authorization: Bearer <token>` on every curalink4chee request.
 
 ---
 
@@ -540,7 +540,7 @@ The backend uses its own service account (`root`/`changeit`) to talk to dcm4chee
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/devices` | List dcm4chee devices |
+| GET | `/api/devices` | List curalink4chee devices |
 | GET | `/api/aes` | List AE titles |
 | GET | `/api/hl7apps` | List HL7 applications |
 | GET | `/api/modalities` | List modalities seen in archive |
@@ -605,7 +605,7 @@ The backend uses its own service account (`root`/`changeit`) to talk to dcm4chee
 
 | Method | Path | Response |
 |---|---|---|
-| GET | `/health` | `{ "status": "ok", "service": "dcm4chee-arc" }` |
+| GET | `/health` | `{ "status": "ok", "service": "curalink4chee-arc" }` |
 
 ---
 
@@ -616,17 +616,17 @@ The backend uses its own service account (`root`/`changeit`) to talk to dcm4chee
 | Variable | Default | Description |
 |---|---|---|
 | `KEYCLOAK_URL` | `https://172.16.16.221:8843` | Keycloak server URL |
-| `DCM4CHEE_URL` | `http://172.16.16.221:8080` | dcm4chee-arc server URL |
-| `DCM4CHEE_USERNAME` | `root` | Service account username for dcm4chee token |
-| `DCM4CHEE_PASSWORD` | `changeit` | Service account password |
+| `curalink4CHEE_URL` | `http://172.16.16.221:8080` | curalink4chee-arc server URL |
+| `curalink4CHEE_USERNAME` | `root` | Service account username for curalink4chee token |
+| `curalink4CHEE_PASSWORD` | `changeit` | Service account password |
 | `KEYCLOAK_ADMIN_USERNAME` | `admin` | Keycloak master realm admin username |
 | `KEYCLOAK_ADMIN_PASSWORD` | `admin` | Keycloak master realm admin password |
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama server URL |
 | `OLLAMA_MODEL` | `qwen2.5` | Ollama model name to use |
-| `DEFAULT_WEBAPP` | `DCM4CHEE` | Default QIDO-RS web app name |
+| `DEFAULT_WEBAPP` | `curalink4CHEE` | Default QIDO-RS web app name |
 | `CURALINK_DB_PATH` | `curalink_users.db` | Path to the SQLite user database |
 
-### Frontend (`dcm4chee-viewer/.env`)
+### Frontend (`curalink4chee-viewer/.env`)
 
 | Variable | Dev Value | Prod Value |
 |---|---|---|
@@ -639,14 +639,14 @@ The backend uses its own service account (`root`/`changeit`) to talk to dcm4chee
 ### Start backend (development)
 
 ```bash
-cd "c:\Users\Ahmed Mohamed\Documents\dcm"
+cd "c:\Users\Ahmed Mohamed\Documents\curalink"
 python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Start frontend (development)
 
 ```bash
-cd dcm4chee-viewer
+cd curalink4chee-viewer
 npm install
 npm run dev
 # Accessible at http://localhost:5173
@@ -655,9 +655,9 @@ npm run dev
 ### Build for production
 
 ```bash
-cd dcm4chee-viewer
+cd curalink4chee-viewer
 npm run build
-# Output: dcm4chee-viewer/dist/
+# Output: curalink4chee-viewer/dist/
 ```
 
 Copy dist to server:
@@ -691,19 +691,19 @@ Description=CuraLink DICOM API
 After=network.target
 
 [Service]
-WorkingDirectory=/path/to/dcm
+WorkingDirectory=/path/to/curalink
 ExecStart=uvicorn app:app --host 127.0.0.1 --port 8000
 Restart=always
-Environment=DCM4CHEE_USERNAME=root
-Environment=DCM4CHEE_PASSWORD=changeit
+Environment=curalink4CHEE_USERNAME=root
+Environment=curalink4CHEE_PASSWORD=changeit
 
 [Install]
 WantedBy=multi-user.target
 ```
 
 ```bash
-systemctl enable dcm-api
-systemctl start dcm-api
+systemctl enable curalink-api
+systemctl start curalink-api
 ```
 
 ### Required Python packages
@@ -716,7 +716,7 @@ pip install fastapi uvicorn httpx langchain-core langchain-ollama
 
 ```bash
 curl https://curalink.nextasolutions.net/health
-# → {"status":"ok","service":"dcm4chee-arc"}
+# → {"status":"ok","service":"curalink4chee-arc"}
 
 curl https://curalink.nextasolutions.net/api/hospitals
 # → [...institution list...]

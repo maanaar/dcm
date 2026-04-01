@@ -12,7 +12,7 @@
 
 ```bash
 # Navigate to the React app directory
-cd dcm4chee-viewer
+cd curalink4chee-viewer
 
 # Install dependencies (if not already done)
 npm install
@@ -80,20 +80,20 @@ Make sure your FastAPI backend is running on port 8000:
 
 ```bash
 # Check if FastAPI is running
-sudo systemctl status dcm-api
+sudo systemctl status curalink-api
 # or
 ps aux | grep uvicorn
 
 # If using systemd, ensure it's enabled
-sudo systemctl enable dcm-api
-sudo systemctl start dcm-api
+sudo systemctl enable curalink-api
+sudo systemctl start curalink-api
 ```
 
 If you don't have a systemd service, create one:
 
 ```bash
 # Create systemd service file
-sudo nano /etc/systemd/system/dcm-api.service
+sudo nano /etc/systemd/system/curalink-api.service
 ```
 
 Add this content:
@@ -105,7 +105,7 @@ After=network.target
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=/path/to/dcm
+WorkingDirectory=/path/to/curalink
 Environment="PATH=/path/to/venv/bin"
 ExecStart=/path/to/venv/bin/uvicorn app:app --host 0.0.0.0 --port 8000
 Restart=always
@@ -118,8 +118,8 @@ WantedBy=multi-user.target
 Then enable and start it:
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable dcm-api
-sudo systemctl start dcm-api
+sudo systemctl enable curalink-api
+sudo systemctl start curalink-api
 ```
 
 ## Step 5: Verify Deployment
@@ -144,14 +144,14 @@ sudo systemctl start dcm-api
    sudo tail -f /var/log/nginx/curalink_access.log
 
    # FastAPI logs
-   sudo journalctl -u dcm-api -f
+   sudo journalctl -u curalink-api -f
    ```
 
 ## Troubleshooting
 
 ### Issue: 502 Bad Gateway
-- Check if FastAPI is running: `sudo systemctl status dcm-api`
-- Check FastAPI logs: `sudo journalctl -u dcm-api -n 50`
+- Check if FastAPI is running: `sudo systemctl status curalink-api`
+- Check FastAPI logs: `sudo journalctl -u curalink-api -n 50`
 - Verify port 8000 is open: `sudo netstat -tlnp | grep 8000`
 
 ### Issue: SSL Certificate Error
@@ -174,7 +174,7 @@ When you need to update the frontend:
 
 ```bash
 # Build new version
-cd dcm4chee-viewer
+cd curalink4chee-viewer
 npm run build
 
 # Transfer to server
@@ -193,11 +193,11 @@ When you need to update the backend:
 ssh user@curalink.nextasolutions.net
 
 # Update code
-cd /path/to/dcm
+cd /path/to/curalink
 git pull  # or however you deploy
 
 # Restart FastAPI
-sudo systemctl restart dcm-api
+sudo systemctl restart curalink-api
 ```
 
 ## Performance Optimization
@@ -244,7 +244,7 @@ Add:
 
 For issues, check:
 1. Nginx error logs: `/var/log/nginx/curalink_error.log`
-2. FastAPI logs: `sudo journalctl -u dcm-api -f`
+2. FastAPI logs: `sudo journalctl -u curalink-api -f`
 3. Browser console for frontend errors
 
 ## Quick Reference

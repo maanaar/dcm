@@ -13,14 +13,14 @@ from fastapi import HTTPException
 
 # ── Config ────────────────────────────────────────────────────────────────────
 KEYCLOAK_URL            = os.getenv("KEYCLOAK_URL",            "https://172.16.16.221:8843")
-DCM4CHEE_URL            = os.getenv("DCM4CHEE_URL",            "http://172.16.16.221:8080")
-USERNAME                = os.getenv("DCM4CHEE_USERNAME",        "root")
-PASSWORD                = os.getenv("DCM4CHEE_PASSWORD",        "changeit")
+curalink4CHEE_URL            = os.getenv("curalink4CHEE_URL",            "http://172.16.16.221:8080")
+USERNAME                = os.getenv("curalink4CHEE_USERNAME",        "root")
+PASSWORD                = os.getenv("curalink4CHEE_PASSWORD",        "changeit")
 KEYCLOAK_ADMIN_USERNAME = os.getenv("KEYCLOAK_ADMIN_USERNAME",  "admin")
 KEYCLOAK_ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD",  "admin")
 GEMINI_API_KEY          = os.getenv("GEMINI_API_KEY",           "")
 GEMINI_MODEL            = os.getenv("GEMINI_MODEL",             "gemini-2.0-flash")
-DEFAULT_WEBAPP          = os.getenv("DEFAULT_WEBAPP",           "DCM4CHEE")
+DEFAULT_WEBAPP          = os.getenv("DEFAULT_WEBAPP",           "curalink4CHEE")
 
 # ── HTTP client (shared, single instance) ────────────────────────────────────
 client = httpx.AsyncClient(verify=False, timeout=30.0)
@@ -33,17 +33,17 @@ HOSPITALS_TTL          = 300  # seconds
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def get_webapp_path(webapp: str) -> str:
-    return f"/dcm4chee-arc/aets/{webapp}/rs"
+    return f"/curalink4chee-arc/aets/{webapp}/rs"
 
 
 async def get_token() -> str:
     now = time.monotonic()
     if _token_cache["value"] and now < _token_cache["expires_at"]:
         return _token_cache["value"]
-    url  = f"{KEYCLOAK_URL}/realms/dcm4che/protocol/openid-connect/token"
+    url  = f"{KEYCLOAK_URL}/realms/curalink4che/protocol/openid-connect/token"
     data = {
         "grant_type": "password",
-        "client_id":  "dcm4chee-arc-ui",
+        "client_id":  "curalink4chee-arc-ui",
         "username":   USERNAME,
         "password":   PASSWORD,
     }
@@ -77,7 +77,7 @@ def _fmt_date(raw: str) -> str:
 
 # ── Hospital / institution helpers ────────────────────────────────────────────
 
-async def _fetch_all_series(token: str, dcm_path: str) -> list:
+async def _fetch_all_series(token: str, curalink_path: str) -> list:
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
     fields  = (
         "&includefield=00080080,00080081,00081040,00080060"
@@ -86,7 +86,7 @@ async def _fetch_all_series(token: str, dcm_path: str) -> list:
     all_series, limit, offset = [], 1000, 0
     while True:
         resp = await client.get(
-            f"{DCM4CHEE_URL}{dcm_path}/series?limit={limit}&offset={offset}{fields}",
+            f"{curalink4CHEE_URL}{curalink_path}/series?limit={limit}&offset={offset}{fields}",
             headers=headers,
         )
         if resp.status_code in (200,):
@@ -100,13 +100,13 @@ async def _fetch_all_series(token: str, dcm_path: str) -> list:
     return all_series
 
 
-async def _fetch_all_studies_sup(token: str, dcm_path: str) -> list:
+async def _fetch_all_studies_sup(token: str, curalink_path: str) -> list:
     headers    = {"Authorization": f"Bearer {token}", "Accept": "application/dicom+json"}
     fields     = "&includefield=00080080,00080081,00081040,00080061,0020000D,00100020,00080020"
     all_studies, limit, offset = [], 1000, 0
     while True:
         resp = await client.get(
-            f"{DCM4CHEE_URL}{dcm_path}/studies?limit={limit}&offset={offset}{fields}",
+            f"{curalink4CHEE_URL}{curalink_path}/studies?limit={limit}&offset={offset}{fields}",
             headers=headers,
         )
         if resp.status_code == 200:
@@ -183,10 +183,10 @@ async def fetch_hospitals_cached() -> list:
         return _hospitals_cache["data"]
     try:
         token    = await get_token()
-        dcm_path = get_webapp_path(DEFAULT_WEBAPP)
+        curalink_path = get_webapp_path(DEFAULT_WEBAPP)
         series_list, studies_sup = await asyncio.gather(
-            _fetch_all_series(token, dcm_path),
-            _fetch_all_studies_sup(token, dcm_path),
+            _fetch_all_series(token, curalink_path),
+            _fetch_all_studies_sup(token, curalink_path),
         )
         institutions = _build_institutions_from_series(series_list, studies_sup)
         print(f"[hospitals] {len(institutions)} institutions from "

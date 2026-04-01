@@ -20,7 +20,7 @@ The project is designed to support radiology and healthcare workflows through br
 This project targets healthcare and medical imaging workflows, enabling:
 - Viewing medical images through the browser
 - Supporting radiology or PACS-related integrations
-- Acting as a frontend layer over DICOM-compatible backends (e.g. dcm4chee)
+- Acting as a frontend layer over DICOM-compatible backends (e.g. curalink4chee)
 
 ---
 
@@ -37,7 +37,7 @@ This project targets healthcare and medical imaging workflows, enabling:
 
 ### Medical Imaging
 - DICOM
-- dcm4chee (integration / compatibility)
+- curalink4chee (integration / compatibility)
 
 ---
 
@@ -45,5 +45,5 @@ This project targets healthcare and medical imaging workflows, enabling:
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/maanaar/dcm.git
-cd dcm
+git clone https://github.com/maanaar/curalink.git
+cd curalink
