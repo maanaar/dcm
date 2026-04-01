@@ -10,13 +10,6 @@ import hashlib
 import json
 from typing import Optional, Dict, List
 
-# ── shared state (config, httpx client, DICOM helpers) ───────────────────────
-from app_state import (
-    curalink4CHEE_URL, client,
-    get_token, clean_query_params, _gv, _fmt_date,
-    _fetch_all_series, fetch_hospitals_cached,
-)
-
 curalink_PATH = f"/curalink4chee-arc/aets/{os.getenv('DEFAULT_WEBAPP', 'curalink4CHEE')}/rs"
 
 app = FastAPI()
