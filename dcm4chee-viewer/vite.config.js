@@ -55,6 +55,7 @@ export default defineConfig({
     allowedHosts: [
       'smart.nextasolutions.net',
       'curalink.nextasolutions.net',
+      'iconnect.nextasolutions.net',
       'localhost',
       '172.16.16.221',
     ]
