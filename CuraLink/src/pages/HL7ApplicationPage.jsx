@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchHL7Applications } from '../services/curalinkchee';
+import { fetchHL7Applications } from '../services/curalink';
 
 export default function HL7ApplicationPage() {
   const [hl7Apps, setHL7Apps] = useState([]);

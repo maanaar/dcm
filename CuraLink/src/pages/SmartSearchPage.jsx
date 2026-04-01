@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { quickSearch, smartSearch } from '../services/curalinkchee';
+import { quickSearch, smartSearch } from '../services/curalink';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const formatDate = (d) => d || '—';

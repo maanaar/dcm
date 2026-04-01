@@ -6,7 +6,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { fetchHospital, fetchHospitalDashboard } from '../services/curalinkchee';
+import { fetchHospital, fetchHospitalDashboard } from '../services/curalink';
 
 // ─── Colour palette (teal brand) ─────────────────────────────────────────────
 const PALETTE = ['#31B6C5', '#1E7586', '#2F545B', '#0a6e79', '#4DD9E8', '#14A3B8'];

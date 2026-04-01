@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchRoutingRules, createRoutingRule, fetchApplicationEntities, fetchDevices } from '../services/curalinkchee';
+import { fetchRoutingRules, createRoutingRule, fetchApplicationEntities, fetchDevices } from '../services/curalink';
 
 const BLANK = {
   cn: '', description: '', deviceName: '', localAETitle: '', sourceAETitle: '', destAETitle: '', queueName: '', bind: '', priority: '',

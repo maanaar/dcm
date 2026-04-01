@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchDashboardStats, fetchHospitals } from '../services/curalinkchee';
+import { fetchDashboardStats, fetchHospitals } from '../services/curalink';
 
 // ─── Skeleton pulse block ─────────────────────────────────────────────────────
 function Skeleton({ className = '' }) {

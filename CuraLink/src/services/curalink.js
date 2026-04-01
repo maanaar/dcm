@@ -1,227 +1,135 @@
 /**
  * CuraLink DICOM API Client
- * Connects to FastAPI backend for curalink4chee operations
+ * Connects to FastAPI backend for CuraLink operations
  */
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://172.16.16.221:8000/api';
 
-// ============================================================================
-// HOSPITALS API
-// ============================================================================
+// ── Core fetch helper ─────────────────────────────────────────────────────────
 
-/**
- * Fetch all hospitals from the registry
- * @returns {Promise<Array>}
- */
-export const fetchHospitals = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/hospitals`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch hospitals: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching hospitals:', error);
-    throw error;
+const apiFetch = async (url, options = {}) => {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API error ${response.status}: ${errorText}`);
   }
+  return response.json();
 };
 
-/**
- * Fetch a single hospital by id
- * @param {number|string} hospitalId
- * @returns {Promise<Object>}
- */
-export const fetchHospital = async (hospitalId) => {
-  try {
-    const response = await fetch(`${API_BASE}/hospitals/${hospitalId}`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch hospital: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching hospital:', error);
-    throw error;
-  }
+const apiPost = (url, body) => apiFetch(url, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+const apiPut = (url, body) => apiFetch(url, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(body),
+});
+
+const apiDelete = (url) => apiFetch(url, { method: 'DELETE' });
+
+
+// ── DICOM date/time formatters ────────────────────────────────────────────────
+
+const fmtDate = (raw) =>
+  raw && raw.length === 8
+    ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`
+    : raw;
+
+const fmtTime = (raw) =>
+  raw && raw.length >= 6
+    ? `${raw.slice(0, 2)}:${raw.slice(2, 4)}:${raw.slice(4, 6)}`
+    : raw;
+
+const dicomName = (tag) => {
+  const nv = tag?.Value?.[0];
+  if (!nv) return '';
+  const parts = (typeof nv === 'object' ? nv.Alphabetic || '' : String(nv)).split('^');
+  return parts.length > 1 ? `${parts[1]} ${parts[0]}` : parts[0];
 };
 
-// ============================================================================
-// PATIENTS API
-// ============================================================================
 
-export const searchPatients = async (formData) => {
-  try {
-    const queryParams = new URLSearchParams();
+// ── Query param builders ──────────────────────────────────────────────────────
 
-    if (formData.patientFamilyName) {
-      const name = formData.fuzzyMatching
-        ? `*${formData.patientFamilyName}*`
-        : formData.patientFamilyName;
-      queryParams.append('PatientName', name);
-    }
-    if (formData.patientId)           queryParams.append('PatientID', formData.patientId);
-    if (formData.issuerOfPatient)     queryParams.append('IssuerOfPatientID', formData.issuerOfPatient);
-    if (formData.patientSex)          queryParams.append('PatientSex', formData.patientSex);
-    if (formData.birthDate)           queryParams.append('PatientBirthDate', formData.birthDate.replace(/-/g, ''));
-    if (formData.verificationStatus)  queryParams.append('PatientVerificationStatus', formData.verificationStatus);
-    if (formData.limitOfPatients)     queryParams.append('limit', formData.limitOfPatients);
-    if (formData.orderBy)             queryParams.append('orderby', formData.orderBy);
-    if (formData.onlyWithStudies)     queryParams.append('onlyWithStudies', 'true');
-    if (formData.mergedPatients)      queryParams.append('merged', 'true');
-    
-    // ✅ Web App Service support
-    if (formData.webAppService)       queryParams.append('webAppService', formData.webAppService);
-
-    const url = `${API_BASE}/patients?${queryParams.toString()}`;
-    console.log('🔍 Searching patients:', url);
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Search failed: ${response.status} - ${errorText}`);
-    }
-
-    return transformPatientData(await response.json());
-  } catch (error) {
-    console.error('❌ Error searching patients:', error);
-    throw error;
-  }
+const buildPatientParams = (fd) => {
+  const p = new URLSearchParams();
+  if (fd.patientFamilyName) p.append('PatientName', fd.fuzzyMatching ? `*${fd.patientFamilyName}*` : fd.patientFamilyName);
+  if (fd.patientId)          p.append('PatientID',              fd.patientId);
+  if (fd.issuerOfPatient)    p.append('IssuerOfPatientID',      fd.issuerOfPatient);
+  if (fd.patientSex)         p.append('PatientSex',             fd.patientSex);
+  if (fd.birthDate)          p.append('PatientBirthDate',       fd.birthDate.replace(/-/g, ''));
+  if (fd.verificationStatus) p.append('PatientVerificationStatus', fd.verificationStatus);
+  if (fd.limitOfPatients)    p.append('limit',                  fd.limitOfPatients);
+  if (fd.orderBy)            p.append('orderby',                fd.orderBy);
+  if (fd.onlyWithStudies)    p.append('onlyWithStudies',        'true');
+  if (fd.mergedPatients)     p.append('merged',                 'true');
+  if (fd.webAppService)      p.append('webAppService',          fd.webAppService);
+  return p;
 };
 
-export const getPatientStudies = async (patientId) => {
-  try {
-    const url = `${API_BASE}/patients/${patientId}/studies`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch studies: ${response.status} - ${errorText}`);
-    }
-    return transformStudyData(await response.json());
-  } catch (error) {
-    console.error('❌ Error fetching patient studies:', error);
-    throw error;
-  }
+const buildStudyParams = (fd) => {
+  const p = new URLSearchParams();
+  if (fd.patientFamilyName)             p.append('PatientName',                     fd.fuzzyMatching ? `*${fd.patientFamilyName}*` : fd.patientFamilyName);
+  if (fd.patientId)                     p.append('PatientID',                       fd.patientId);
+  if (fd.issuerOfPatient)               p.append('IssuerOfPatientID',               fd.issuerOfPatient);
+  if (fd.accessionNumber)               p.append('AccessionNumber',                 fd.accessionNumber);
+  if (fd.issuerOfAccessionNumber)       p.append('IssuerOfAccessionNumberSequence', fd.issuerOfAccessionNumber);
+  if (fd.studyDescription)              p.append('StudyDescription',                fd.studyDescription);
+  if (fd.modality && fd.modality !== 'All') p.append('ModalitiesInStudy',           fd.modality);
+  if (fd.reportStatus)                  p.append('CompletionFlag',                  fd.reportStatus);
+  if (fd.institutionalName)             p.append('InstitutionName',                 fd.institutionalName);
+  if (fd.institutionalDepartmentName)   p.append('InstitutionalDepartmentName',     fd.institutionalDepartmentName);
+  if (fd.referringPhysician)            p.append('ReferringPhysicianName',          fd.referringPhysician);
+  if (fd.sendingAET)                    p.append('SendingApplicationEntityTitleOfSeries', fd.sendingAET);
+  if (fd.studyDate)                     p.append('StudyDate',       fd.studyDate.replace(/-/g, ''));
+  if (fd.studyTime)                     p.append('StudyTime',       fd.studyTime.replace(/:/g, ''));
+  if (fd.studyReceived)                 p.append('StudyReceiveDateTime', fd.studyReceived.replace(/-/g, ''));
+  if (fd.studyAccess)                   p.append('StudyAccessDateTime',  fd.studyAccess.replace(/-/g, ''));
+  if (fd.limit)                         p.append('limit',    fd.limit);
+  if (fd.orderBy)                       p.append('orderby',  fd.orderBy);
+  if (fd.webAppService)                 p.append('webAppService', fd.webAppService);
+  return p;
 };
 
-// ============================================================================
-// STUDIES API
-// ============================================================================
-
-export const searchStudies = async (formData) => {
-  try {
-    const queryParams = new URLSearchParams();
-
-    // Patient Demographics
-    if (formData.patientFamilyName) {
-      const name = formData.fuzzyMatching
-        ? `*${formData.patientFamilyName}*`
-        : formData.patientFamilyName;
-      queryParams.append('PatientName', name);
-    }
-    if (formData.patientId) queryParams.append('PatientID', formData.patientId);
-    if (formData.issuerOfPatient) queryParams.append('IssuerOfPatientID', formData.issuerOfPatient);
-    
-    // Study Identifiers
-    if (formData.accessionNumber) queryParams.append('AccessionNumber', formData.accessionNumber);
-    if (formData.issuerOfAccessionNumber) queryParams.append('IssuerOfAccessionNumberSequence', formData.issuerOfAccessionNumber);
-    
-    // Study Details
-    if (formData.studyDescription) queryParams.append('StudyDescription', formData.studyDescription);
-    if (formData.modality && formData.modality !== 'All') queryParams.append('ModalitiesInStudy', formData.modality);
-    if (formData.reportStatus) queryParams.append('CompletionFlag', formData.reportStatus);
-    
-    // Institutional Information
-    if (formData.institutionalName) queryParams.append('InstitutionName', formData.institutionalName);
-    if (formData.institutionalDepartmentName) queryParams.append('InstitutionalDepartmentName', formData.institutionalDepartmentName);
-    if (formData.referringPhysician) queryParams.append('ReferringPhysicianName', formData.referringPhysician);
-    if (formData.sendingAET) queryParams.append('SendingApplicationEntityTitleOfSeries', formData.sendingAET);
-    
-    // Date/Time Fields
-    if (formData.studyDate) queryParams.append('StudyDate', formData.studyDate.replace(/-/g, ''));
-    if (formData.studyTime) queryParams.append('StudyTime', formData.studyTime.replace(/:/g, ''));
-    if (formData.studyReceived) queryParams.append('StudyReceiveDateTime', formData.studyReceived.replace(/-/g, ''));
-    if (formData.studyAccess) queryParams.append('StudyAccessDateTime', formData.studyAccess.replace(/-/g, ''));
-    
-    // Query Options
-    if (formData.limit) queryParams.append('limit', formData.limit);
-    if (formData.orderBy) queryParams.append('orderby', formData.orderBy);
-    
-    // ✅ Web App Service support - NOW FUNCTIONAL
-    if (formData.webAppService) queryParams.append('webAppService', formData.webAppService);
-
-    const url = `${API_BASE}/studies?${queryParams.toString()}`;
-    console.log('🔍 Searching studies:', url);
-    
-    const response = await fetch(url);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Search failed: ${response.status} - ${errorText}`);
-    }
-    return transformStudyData(await response.json());
-  } catch (error) {
-    console.error('❌ Error searching studies:', error);
-    throw error;
-  }
+const buildSeriesParams = (fd) => {
+  const p = new URLSearchParams();
+  if (fd.patientFamilyName) p.append('PatientName', fd.fuzzyMatching ? `*${fd.patientFamilyName}*` : fd.patientFamilyName);
+  if (fd.patientId)          p.append('PatientID',              fd.patientId);
+  if (fd.studyInstanceUID)   p.append('StudyInstanceUID',       fd.studyInstanceUID);
+  if (fd.seriesInstanceUID)  p.append('SeriesInstanceUID',      fd.seriesInstanceUID);
+  if (fd.seriesNumber)       p.append('SeriesNumber',           fd.seriesNumber);
+  if (fd.seriesDescription)  p.append('SeriesDescription',      fd.seriesDescription);
+  if (fd.modality && fd.modality !== 'All') p.append('Modality', fd.modality);
+  if (fd.bodyPartExamined)   p.append('BodyPartExamined',       fd.bodyPartExamined);
+  if (fd.performingPhysician) p.append('PerformingPhysicianName', fd.performingPhysician);
+  if (fd.seriesDate)         p.append('SeriesDate', fd.seriesDate.replace(/-/g, ''));
+  if (fd.seriesTime)         p.append('SeriesTime', fd.seriesTime.replace(/:/g, ''));
+  if (fd.limit)              p.append('limit',       fd.limit);
+  if (fd.orderBy)            p.append('orderby',     fd.orderBy);
+  if (fd.webAppService)      p.append('webAppService', fd.webAppService);
+  return p;
 };
 
-// ============================================================================
-// DASHBOARD API
-// ============================================================================
 
-export const fetchDashboardStats = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/dashboard`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Dashboard fetch failed: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching dashboard stats:', error);
-    throw error;
-  }
-};
-
-export const fetchHospitalDashboard = async (hospitalId) => {
-  try {
-    const response = await fetch(`${API_BASE}/dashboard/hospital/${hospitalId}`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Hospital dashboard fetch failed: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching hospital dashboard:', error);
-    throw error;
-  }
-};
-
-// ============================================================================
-// DATA TRANSFORMERS
-// ============================================================================
+// ── Data transformers ─────────────────────────────────────────────────────────
 
 const transformPatientData = (dicomData) => {
   if (!Array.isArray(dicomData)) return [];
   return dicomData.map((patient, index) => {
-    const getValue = (tag, vr = 'Value', idx = 0) => patient[tag]?.[vr]?.[idx] || '';
-    const patientName = getValue('00100010', 'Value', 0)?.Alphabetic || '';
-    const nameParts   = patientName.split('^');
-    const displayName = nameParts.length > 1 ? `${nameParts[1]} ${nameParts[0]}` : patientName;
-    const birthDate   = getValue('00100030');
-    const formattedBirthDate = birthDate && birthDate.length === 8
-      ? `${birthDate.slice(0, 4)}-${birthDate.slice(4, 6)}-${birthDate.slice(6, 8)}`
-      : birthDate;
+    const gv = (tag) => patient[tag]?.Value?.[0] || '';
+    const birthDate = gv('00100030');
     return {
-      id: getValue('00100020') || `patient_${index}`,
-      name: displayName || 'Unknown',
-      patientId: getValue('00100020'),
-      sex: getValue('00100040'),
-      birthDate: formattedBirthDate,
-      studies: patient.numberOfStudies || 0,
-      issuer: getValue('00100021'),
-      verificationStatus: getValue('00101024'),
-      rawData: patient,
+      id:                 gv('00100020') || `patient_${index}`,
+      name:               dicomName(patient['00100010']) || 'Unknown',
+      patientId:          gv('00100020'),
+      sex:                gv('00100040'),
+      birthDate:          fmtDate(birthDate),
+      studies:            patient.numberOfStudies || 0,
+      issuer:             gv('00100021'),
+      verificationStatus: gv('00101024'),
+      rawData:            patient,
     };
   });
 };
@@ -229,678 +137,312 @@ const transformPatientData = (dicomData) => {
 const transformStudyData = (dicomData) => {
   if (!Array.isArray(dicomData)) return [];
   return dicomData.map((study, index) => {
-    const getValue = (tag, vr = 'Value', idx = 0) => study[tag]?.[vr]?.[idx] || '';
-    const patientName = getValue('00100010', 'Value', 0)?.Alphabetic || '';
-    const nameParts   = patientName.split('^');
-    const displayName = nameParts.length > 1 ? `${nameParts[1]} ${nameParts[0]}` : patientName;
-    const studyDate   = getValue('00080020');
-    const formattedDate = studyDate && studyDate.length === 8
-      ? `${studyDate.slice(0, 4)}-${studyDate.slice(4, 6)}-${studyDate.slice(6, 8)}`
-      : studyDate;
-    const studyTime     = getValue('00080030');
-    const formattedTime = studyTime && studyTime.length >= 6
-      ? `${studyTime.slice(0, 2)}:${studyTime.slice(2, 4)}:${studyTime.slice(4, 6)}`
-      : studyTime;
+    const gv = (tag) => study[tag]?.Value?.[0] || '';
     return {
-      id: getValue('0020000D') || `study_${index}`,
-      studyInstanceUID: getValue('0020000D'),
-      patientName: displayName || 'Unknown',
-      patientId: getValue('00100020'),
-      studyDate: formattedDate,
-      studyTime: formattedTime,
-      modality: getValue('00080061'),
-      description: getValue('00081030'),
-      accessionNumber: getValue('00080050'),
-      referringPhysician: getValue('00080090'),
-      numberOfSeries:    study.numberOfStudyRelatedSeries    || getValue('00201206'),
-      numberOfInstances: study.numberOfStudyRelatedInstances || getValue('00201208'),
-      institutionalDepartmentName: getValue('00081040'),
-      rawData: study,
+      id:                          gv('0020000D') || `study_${index}`,
+      studyInstanceUID:             gv('0020000D'),
+      patientName:                  dicomName(study['00100010']) || 'Unknown',
+      patientId:                    gv('00100020'),
+      studyDate:                    fmtDate(gv('00080020')),
+      studyTime:                    fmtTime(gv('00080030')),
+      modality:                     gv('00080061'),
+      description:                  gv('00081030'),
+      accessionNumber:              gv('00080050'),
+      referringPhysician:           gv('00080090'),
+      numberOfSeries:               study.numberOfStudyRelatedSeries    || gv('00201206'),
+      numberOfInstances:            study.numberOfStudyRelatedInstances || gv('00201208'),
+      institutionalDepartmentName:  gv('00081040'),
+      rawData:                      study,
     };
   });
-};
-
-// ============================================================================
-// MWL API
-// ============================================================================
-
-export const searchMWL = async (formData) => {
-  try {
-    const queryParams = new URLSearchParams();
-    if (formData.patientFamilyName) queryParams.append('PatientName', formData.patientFamilyName);
-    if (formData.patientId)         queryParams.append('PatientID', formData.patientId);
-    if (formData.accessionNumber)   queryParams.append('AccessionNumber', formData.accessionNumber);
-    if (formData.issuerOfPatient)   queryParams.append('IssuerOfPatientID', formData.issuerOfPatient);
-    if (formData.modality) {
-      queryParams.append('ScheduledProcedureStepSequence.Modality', formData.modality);
-    }
-    if (formData.scheduledStationAET) {
-      queryParams.append('ScheduledProcedureStepSequence.ScheduledStationAETitle', formData.scheduledStationAET);
-    }
-    if (formData.spsStartTime) {
-      queryParams.append(
-        'ScheduledProcedureStepSequence.ScheduledProcedureStepStartTime',
-        formData.spsStartTime.replace(/:/g, '')
-      );
-    }
-    const response = await fetch(`${API_BASE}/mwl?${queryParams.toString()}`);
-    if (!response.ok) throw new Error(`MWL search failed: ${await response.text()}`);
-    return await response.json();
-  } catch (error) {
-    console.error('❌ MWL search error:', error);
-    throw error;
-  }
-};
-
-export const transformMWLData = (dicomData) => {
-  if (!Array.isArray(dicomData)) return [];
-  return dicomData.map((item, index) => {
-    const getValue = (obj, tag, vr = 'Value', idx = 0) => obj?.[tag]?.[vr]?.[idx] || '';
-    const sps = item['00400100']?.Value?.[0] || {};
-    return {
-      id: index,
-      patientName:     getValue(item, '00100010')?.Alphabetic || '',
-      patientId:       getValue(item, '00100020'),
-      accessionNumber: getValue(item, '00080050'),
-      modality:        getValue(sps,  '00080060'),
-      spsStartDate:    getValue(sps,  '00400002'),
-      spsStartTime:    getValue(sps,  '00400003'),
-      stationAET:      getValue(sps,  '00400001'),
-      description:     getValue(sps,  '00400007'),
-      rawData: item,
-    };
-  });
-};
-
-// ============================================================================
-// SERIES API
-// ============================================================================
-
-export const searchSeries = async (formData) => {
-  try {
-    const queryParams = new URLSearchParams();
-
-    // Patient Demographics
-    if (formData.patientFamilyName) {
-      const name = formData.fuzzyMatching
-        ? `*${formData.patientFamilyName}*`
-        : formData.patientFamilyName;
-      queryParams.append('PatientName', name);
-    }
-    if (formData.patientId) queryParams.append('PatientID', formData.patientId);
-
-    // Study/Series Identifiers
-    if (formData.studyInstanceUID) queryParams.append('StudyInstanceUID', formData.studyInstanceUID);
-    if (formData.seriesInstanceUID) queryParams.append('SeriesInstanceUID', formData.seriesInstanceUID);
-    if (formData.seriesNumber) queryParams.append('SeriesNumber', formData.seriesNumber);
-
-    // Series Details
-    if (formData.seriesDescription) queryParams.append('SeriesDescription', formData.seriesDescription);
-    if (formData.modality && formData.modality !== 'All') queryParams.append('Modality', formData.modality);
-    if (formData.bodyPartExamined) queryParams.append('BodyPartExamined', formData.bodyPartExamined);
-
-    // Performing Physician
-    if (formData.performingPhysician) queryParams.append('PerformingPhysicianName', formData.performingPhysician);
-
-    // Date/Time
-    if (formData.seriesDate) queryParams.append('SeriesDate', formData.seriesDate.replace(/-/g, ''));
-    if (formData.seriesTime) queryParams.append('SeriesTime', formData.seriesTime.replace(/:/g, ''));
-
-    // Query Options
-    if (formData.limit) queryParams.append('limit', formData.limit);
-    if (formData.orderBy) queryParams.append('orderby', formData.orderBy);
-    if (formData.webAppService) queryParams.append('webAppService', formData.webAppService);
-
-    const url = `${API_BASE}/series?${queryParams.toString()}`;
-    console.log('🔍 Searching series:', url);
-
-    const response = await fetch(url);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Search failed: ${response.status} - ${errorText}`);
-    }
-
-    return transformSeriesData(await response.json());
-  } catch (error) {
-    console.error('❌ Error searching series:', error);
-    throw error;
-  }
 };
 
 const transformSeriesData = (dicomData) => {
   if (!Array.isArray(dicomData)) return [];
   return dicomData.map((series, index) => {
-    const getValue = (tag, vr = 'Value', idx = 0) => series[tag]?.[vr]?.[idx] || '';
-
-    const seriesDate = getValue('00080021');
-    const formattedDate = seriesDate && seriesDate.length === 8
-      ? `${seriesDate.slice(0, 4)}-${seriesDate.slice(4, 6)}-${seriesDate.slice(6, 8)}`
-      : seriesDate;
-
-    const seriesTime = getValue('00080031');
-    const formattedTime = seriesTime && seriesTime.length >= 6
-      ? `${seriesTime.slice(0, 2)}:${seriesTime.slice(2, 4)}:${seriesTime.slice(4, 6)}`
-      : seriesTime;
-
+    const gv = (tag) => series[tag]?.Value?.[0] || '';
     return {
-      id: getValue('0020000E') || `series_${index}`,
-      seriesInstanceUID: getValue('0020000E'),
-      seriesNumber: getValue('00200011'),
-      seriesDescription: getValue('0008103E'),
-      modality: getValue('00080060'),
-      bodyPartExamined: getValue('00180015'),
-      performingPhysician: getValue('00081050'),
-      seriesDate: formattedDate,
-      seriesTime: formattedTime,
-      numberOfInstances: getValue('00201209'),
-      studyInstanceUID: getValue('0020000D'),
-      rawData: series,
+      id:                  gv('0020000E') || `series_${index}`,
+      seriesInstanceUID:   gv('0020000E'),
+      seriesNumber:        gv('00200011'),
+      seriesDescription:   gv('0008103E'),
+      modality:            gv('00080060'),
+      bodyPartExamined:    gv('00180015'),
+      performingPhysician: gv('00081050'),
+      seriesDate:          fmtDate(gv('00080021')),
+      seriesTime:          fmtTime(gv('00080031')),
+      numberOfInstances:   gv('00201209'),
+      studyInstanceUID:    gv('0020000D'),
+      rawData:             series,
     };
   });
 };
 
-// ============================================================================
-// DEVICES CONFIGURATION API
-// ============================================================================
-
-export const fetchDevices = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/devices`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch devices: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching devices:', error);
-    throw error;
-  }
+export const transformMWLData = (dicomData) => {
+  if (!Array.isArray(dicomData)) return [];
+  return dicomData.map((item, index) => {
+    const gv  = (obj, tag) => obj?.[tag]?.Value?.[0] || '';
+    const sps = item['00400100']?.Value?.[0] || {};
+    return {
+      id:              index,
+      patientName:     item['00100010']?.Value?.[0]?.Alphabetic || '',
+      patientId:       gv(item, '00100020'),
+      accessionNumber: gv(item, '00080050'),
+      modality:        gv(sps,  '00080060'),
+      spsStartDate:    gv(sps,  '00400002'),
+      spsStartTime:    gv(sps,  '00400003'),
+      stationAET:      gv(sps,  '00400001'),
+      description:     gv(sps,  '00400007'),
+      rawData:         item,
+    };
+  });
 };
 
-export const fetchDevice = async (deviceName) => {
-  try {
-    const response = await fetch(`${API_BASE}/devices/${encodeURIComponent(deviceName)}`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch device: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching device:', error);
-    throw error;
-  }
-};
 
 // ============================================================================
-// APPLICATION ENTITIES (AE TITLES) API
+// HOSPITALS
 // ============================================================================
 
-export const fetchApplicationEntities = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/aes`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch AEs: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching Application Entities:', error);
-    throw error;
-  }
-};
+export const fetchHospitals = () => apiFetch(`${API_BASE}/hospitals`);
 
-export const fetchApplicationEntity = async (aet) => {
-  try {
-    const response = await fetch(`${API_BASE}/aes/${encodeURIComponent(aet)}`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch AE: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching Application Entity:', error);
-    throw error;
-  }
-};
+export const fetchHospital = (hospitalId) => apiFetch(`${API_BASE}/hospitals/${hospitalId}`);
+
 
 // ============================================================================
-// HL7 APPLICATIONS API
+// PATIENTS
 // ============================================================================
 
-export const fetchHL7Applications = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/hl7apps`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch HL7 apps: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching HL7 Applications:', error);
-    throw error;
-  }
+export const searchPatients = async (formData) => {
+  const url = `${API_BASE}/patients?${buildPatientParams(formData)}`;
+  console.log('🔍 Searching patients:', url);
+  return transformPatientData(await apiFetch(url));
 };
 
-export const fetchHL7Application = async (hl7AppName) => {
-  try {
-    const response = await fetch(`${API_BASE}/hl7apps/${encodeURIComponent(hl7AppName)}`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch HL7 app: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching HL7 Application:', error);
-    throw error;
-  }
-};
+export const getPatientStudies = async (patientId) =>
+  transformStudyData(await apiFetch(`${API_BASE}/patients/${patientId}/studies`));
+
 
 // ============================================================================
-// ROUTING RULES API
+// STUDIES
 // ============================================================================
 
-export const fetchRoutingRules = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/routing-rules`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch routing rules: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching routing rules:', error);
-    throw error;
-  }
+export const searchStudies = async (formData) => {
+  const url = `${API_BASE}/studies?${buildStudyParams(formData)}`;
+  console.log('🔍 Searching studies:', url);
+  return transformStudyData(await apiFetch(url));
 };
 
-export const createRoutingRule = async (ruleData) => {
-  try {
-    const response = await fetch(`${API_BASE}/routing-rules`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(ruleData),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to create routing rule: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error creating routing rule:', error);
-    throw error;
-  }
-};
 
 // ============================================================================
-// TRANSFORM RULES API
+// DASHBOARD
 // ============================================================================
 
-export const fetchTransformRules = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/transform-rules`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch transform rules: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching transform rules:', error);
-    throw error;
-  }
-};
+export const fetchDashboardStats = () => apiFetch(`${API_BASE}/dashboard`);
 
-export const createTransformRule = async (ruleData) => {
-  try {
-    const response = await fetch(`${API_BASE}/transform-rules`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(ruleData),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to create transform rule: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error creating transform rule:', error);
-    throw error;
-  }
-};
+export const fetchHospitalDashboard = (hospitalId) =>
+  apiFetch(`${API_BASE}/dashboard/hospital/${hospitalId}`);
+
 
 // ============================================================================
-// EXPORT / ROUTING RULES API
+// MWL
 // ============================================================================
 
-export const fetchExportRules = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/export-rules`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch export rules: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching export rules:', error);
-    throw error;
-  }
+export const searchMWL = async (formData) => {
+  const p = new URLSearchParams();
+  if (formData.patientFamilyName) p.append('PatientName', formData.patientFamilyName);
+  if (formData.patientId)         p.append('PatientID',          formData.patientId);
+  if (formData.accessionNumber)   p.append('AccessionNumber',    formData.accessionNumber);
+  if (formData.issuerOfPatient)   p.append('IssuerOfPatientID',  formData.issuerOfPatient);
+  if (formData.modality)          p.append('ScheduledProcedureStepSequence.Modality', formData.modality);
+  if (formData.scheduledStationAET) p.append('ScheduledProcedureStepSequence.ScheduledStationAETitle', formData.scheduledStationAET);
+  if (formData.spsStartTime)      p.append('ScheduledProcedureStepSequence.ScheduledProcedureStepStartTime', formData.spsStartTime.replace(/:/g, ''));
+  return apiFetch(`${API_BASE}/mwl?${p}`);
 };
 
-export const createExportRule = async (ruleData) => {
-  try {
-    const response = await fetch(`${API_BASE}/export-rules`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(ruleData),
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to create export rule: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error creating export rule:', error);
-    throw error;
-  }
-};
-
-export const deleteExportRule = async (exporterId) => {
-  try {
-    const response = await fetch(`${API_BASE}/export-rules/${encodeURIComponent(exporterId)}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to delete export rule: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error deleting export rule:', error);
-    throw error;
-  }
-};
 
 // ============================================================================
-// WEB APPLICATIONS / ARCHIVES
+// SERIES
+// ============================================================================
+
+export const searchSeries = async (formData) => {
+  const url = `${API_BASE}/series?${buildSeriesParams(formData)}`;
+  console.log('🔍 Searching series:', url);
+  return transformSeriesData(await apiFetch(url));
+};
+
+
+// ============================================================================
+// DEVICES
+// ============================================================================
+
+export const fetchDevices = () => apiFetch(`${API_BASE}/devices`);
+
+export const fetchDevice = (deviceName) =>
+  apiFetch(`${API_BASE}/devices/${encodeURIComponent(deviceName)}`);
+
+
+// ============================================================================
+// APPLICATION ENTITIES (AE TITLES)
+// ============================================================================
+
+export const fetchApplicationEntities = () => apiFetch(`${API_BASE}/aes`);
+
+export const fetchApplicationEntity = (aet) =>
+  apiFetch(`${API_BASE}/aes/${encodeURIComponent(aet)}`);
+
+
+// ============================================================================
+// HL7 APPLICATIONS
+// ============================================================================
+
+export const fetchHL7Applications = () => apiFetch(`${API_BASE}/hl7apps`);
+
+export const fetchHL7Application = (name) =>
+  apiFetch(`${API_BASE}/hl7apps/${encodeURIComponent(name)}`);
+
+
+// ============================================================================
+// ROUTING RULES
+// ============================================================================
+
+export const fetchRoutingRules  = () => apiFetch(`${API_BASE}/routing-rules`);
+export const createRoutingRule  = (data) => apiPost(`${API_BASE}/routing-rules`, data);
+
+// ============================================================================
+// TRANSFORM RULES
+// ============================================================================
+
+export const fetchTransformRules = () => apiFetch(`${API_BASE}/transform-rules`);
+export const createTransformRule = (data) => apiPost(`${API_BASE}/transform-rules`, data);
+
+
+// ============================================================================
+// EXPORT RULES
+// ============================================================================
+
+export const fetchExportRules  = () => apiFetch(`${API_BASE}/export-rules`);
+export const createExportRule  = (data) => apiPost(`${API_BASE}/export-rules`, data);
+export const deleteExportRule  = (cn, deviceName) => {
+  const url = deviceName
+    ? `${API_BASE}/export-rules/${encodeURIComponent(cn)}?deviceName=${encodeURIComponent(deviceName)}`
+    : `${API_BASE}/export-rules/${encodeURIComponent(cn)}`;
+  return apiDelete(url);
+};
+
+
+// ============================================================================
+// WEB APPS / ARCHIVES
 // ============================================================================
 
 export const fetchWebApps = async () => {
   try {
-    const response = await fetch(`${API_BASE}/webapps`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch web apps: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching web apps:', error);
-    // Return default fallback
-    return [
-      { webAppName: 'curalink4chee-arc', description: 'curalink4CHEE Archive 5.x' }
-    ];
+    return await apiFetch(`${API_BASE}/webapps`);
+  } catch {
+    return [{ webAppName: 'dcm4chee-arc', description: 'DCM4CHEE Archive 5.x' }];
   }
 };
 
 export const fetchArchives = async () => {
   try {
-    const response = await fetch(`${API_BASE}/archives`);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch archives: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching archives:', error);
+    return await apiFetch(`${API_BASE}/archives`);
+  } catch {
     return [];
   }
 };
 
+
 // ============================================================================
-// EXPORTERS API
+// EXPORTERS
 // ============================================================================
 
-export const fetchExporters = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/exporters`);
-    if (!response.ok) throw new Error(`Failed to fetch exporters: ${response.status}`);
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching exporters:', error);
-    return [];
-  }
+export const fetchExporters  = async () => {
+  try { return await apiFetch(`${API_BASE}/exporters`); }
+  catch { return []; }
 };
 
-export const createExporter = async (exporterData) => {
-  try {
-    const response = await fetch(`${API_BASE}/exporters`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(exporterData),
-    });
-    if (!response.ok) throw new Error(`Failed to create exporter: ${await response.text()}`);
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error creating exporter:', error);
-    throw error;
-  }
-};
+export const createExporter  = (data) => apiPost(`${API_BASE}/exporters`, data);
 
-export const fetchExportTasks = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/export-tasks`);
-    if (!response.ok) throw new Error(`Failed to fetch export tasks: ${response.status}`);
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching export tasks:', error);
-    return { SCHEDULED: 0, 'IN PROCESS': 0, COMPLETED: 0, WARNING: 0, FAILED: 0, CANCELED: 0 };
-  }
-};
-
-export const deleteExporter = async (exporterID, deviceName) => {
+export const deleteExporter  = (exporterID, deviceName) => {
   const url = deviceName
     ? `${API_BASE}/exporters/${encodeURIComponent(exporterID)}?deviceName=${encodeURIComponent(deviceName)}`
     : `${API_BASE}/exporters/${encodeURIComponent(exporterID)}`;
-  const response = await fetch(url, { method: 'DELETE' });
-  if (!response.ok) throw new Error(await response.text());
-  return await response.json();
+  return apiDelete(url);
+};
+
+
+// ============================================================================
+// EXPORT TASKS
+// ============================================================================
+
+export const fetchExportTasks = async () => {
+  try { return await apiFetch(`${API_BASE}/export-tasks`); }
+  catch { return { SCHEDULED: 0, 'IN PROCESS': 0, COMPLETED: 0, WARNING: 0, FAILED: 0, CANCELED: 0 }; }
+};
+
+const buildTaskParams = (filters) => {
+  const p = new URLSearchParams();
+  if (filters.exporterID)       p.append('exporterID',       filters.exporterID);
+  if (filters.deviceName)       p.append('deviceName',        filters.deviceName);
+  if (filters.status)           p.append('status',            filters.status);
+  if (filters.studyInstanceUID) p.append('studyInstanceUID',  filters.studyInstanceUID);
+  if (filters.batchID)          p.append('batchID',           filters.batchID);
+  if (filters.createdTime)      p.append('createdTime',       filters.createdTime);
+  if (filters.updatedTime)      p.append('updatedTime',       filters.updatedTime);
+  return p;
 };
 
 export const fetchExportTaskList = async (filters = {}) => {
   try {
-    const params = new URLSearchParams();
-    if (filters.exporterID) params.append('exporterID', filters.exporterID);
-    if (filters.deviceName) params.append('deviceName', filters.deviceName);
-    if (filters.status) params.append('status', filters.status);
-    if (filters.studyInstanceUID) params.append('studyInstanceUID', filters.studyInstanceUID);
-    if (filters.batchID) params.append('batchID', filters.batchID);
-    if (filters.createdTime) params.append('createdTime', filters.createdTime);
-    if (filters.updatedTime) params.append('updatedTime', filters.updatedTime);
-    params.append('limit', filters.limit || 20);
-    params.append('offset', filters.offset || 0);
-    const response = await fetch(`${API_BASE}/export-tasks/list?${params}`);
-    if (!response.ok) throw new Error(`Failed: ${response.status}`);
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Error fetching export task list:', error);
-    return [];
-  }
+    const p = buildTaskParams(filters);
+    p.append('limit',  filters.limit  || 20);
+    p.append('offset', filters.offset || 0);
+    return await apiFetch(`${API_BASE}/export-tasks/list?${p}`);
+  } catch { return []; }
 };
 
-export const countExportTasksFiltered = async (filters = {}) => {
-  const params = new URLSearchParams();
-  if (filters.exporterID) params.append('exporterID', filters.exporterID);
-  if (filters.deviceName) params.append('deviceName', filters.deviceName);
-  if (filters.status) params.append('status', filters.status);
-  if (filters.studyInstanceUID) params.append('studyInstanceUID', filters.studyInstanceUID);
-  if (filters.batchID) params.append('batchID', filters.batchID);
-  if (filters.createdTime) params.append('createdTime', filters.createdTime);
-  if (filters.updatedTime) params.append('updatedTime', filters.updatedTime);
-  const response = await fetch(`${API_BASE}/export-tasks/count?${params}`);
-  if (!response.ok) throw new Error(await response.text());
-  return await response.json();
-};
+export const countExportTasksFiltered = (filters = {}) =>
+  apiFetch(`${API_BASE}/export-tasks/count?${buildTaskParams(filters)}`);
 
-export const cancelExportTasks = async (filters = {}) => {
-  const response = await fetch(`${API_BASE}/export-tasks/cancel`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(filters),
-  });
-  if (!response.ok) throw new Error(await response.text());
-  return await response.json();
-};
+export const cancelExportTasks     = (filters = {}) => apiPost(`${API_BASE}/export-tasks/cancel`, filters);
+export const rescheduleExportTasks = (filters = {}) => apiPost(`${API_BASE}/export-tasks/reschedule`, filters);
 
-export const rescheduleExportTasks = async (filters = {}) => {
-  const response = await fetch(`${API_BASE}/export-tasks/reschedule`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(filters),
-  });
-  if (!response.ok) throw new Error(await response.text());
-  return await response.json();
-};
+export const deleteExportTasks = (filters = {}) =>
+  apiDelete(`${API_BASE}/export-tasks?${buildTaskParams(filters)}`);
 
-export const deleteExportTasks = async (filters = {}) => {
-  const params = new URLSearchParams();
-  if (filters.exporterID) params.append('exporterID', filters.exporterID);
-  if (filters.deviceName) params.append('deviceName', filters.deviceName);
-  if (filters.status) params.append('status', filters.status);
-  if (filters.studyInstanceUID) params.append('studyInstanceUID', filters.studyInstanceUID);
-  if (filters.batchID) params.append('batchID', filters.batchID);
-  if (filters.createdTime) params.append('createdTime', filters.createdTime);
-  if (filters.updatedTime) params.append('updatedTime', filters.updatedTime);
-  const response = await fetch(`${API_BASE}/export-tasks?${params}`, { method: 'DELETE' });
-  if (!response.ok) throw new Error(await response.text());
-  return await response.json();
-};
+export const getExportTasksCSVUrl = (filters = {}) =>
+  `${API_BASE}/export-tasks/csv?${buildTaskParams(filters)}`;
 
-export const getExportTasksCSVUrl = (filters = {}) => {
-  const params = new URLSearchParams();
-  if (filters.exporterID) params.append('exporterID', filters.exporterID);
-  if (filters.deviceName) params.append('deviceName', filters.deviceName);
-  if (filters.status) params.append('status', filters.status);
-  if (filters.studyInstanceUID) params.append('studyInstanceUID', filters.studyInstanceUID);
-  if (filters.batchID) params.append('batchID', filters.batchID);
-  if (filters.createdTime) params.append('createdTime', filters.createdTime);
-  if (filters.updatedTime) params.append('updatedTime', filters.updatedTime);
-  return `${API_BASE}/export-tasks/csv?${params}`;
-};
 
 // ============================================================================
-// USER MANAGEMENT API
+// USER MANAGEMENT
 // ============================================================================
 
 export const loginUser = async (email, password) => {
-  const response = await fetch(`${API_BASE}/auth/login`, {
+  const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Login failed');
   }
-  return await response.json(); // { success: true, user: { id, username, isAdmin, permissions, ... } }
+  return res.json();
 };
 
-export const fetchUsers = async () => {
-  try {
-    const response = await fetch(`${API_BASE}/users`);
-    if (!response.ok) throw new Error(`Failed to fetch users: ${response.status}`);
-    return await response.json();
-  } catch (error) { console.error('❌ Error fetching users:', error); return []; }
+export const fetchUsers  = async () => {
+  try { return await apiFetch(`${API_BASE}/users`); }
+  catch { return []; }
 };
 
-export const createUser = async (data) => {
-  const response = await fetch(`${API_BASE}/users`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) throw new Error(await response.text());
-  return await response.json();
+export const fetchUser   = async (id) => {
+  try { return await apiFetch(`${API_BASE}/users/${encodeURIComponent(id)}`); }
+  catch { return null; }
 };
 
-export const updateUser = async (id, data) => {
-  const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) throw new Error(await response.text());
-  return await response.json();
-};
+export const createUser          = (data) => apiPost(`${API_BASE}/users`, data);
+export const updateUser          = (id, data) => apiPut(`${API_BASE}/users/${encodeURIComponent(id)}`, data);
+export const deleteUser          = (id) => apiDelete(`${API_BASE}/users/${encodeURIComponent(id)}`);
+export const setUserPermissions  = (id, permissions) => apiPut(`${API_BASE}/users/${encodeURIComponent(id)}`, { permissions });
 
-export const deleteUser = async (id) => {
-  const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  if (!response.ok) throw new Error(await response.text());
-  return await response.json();
-};
 
-export const fetchUser = async (id) => {
-  try {
-    const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`);
-    if (!response.ok) throw new Error(`Failed: ${response.status}`);
-    return await response.json();
-  } catch (error) { console.error('❌ Error fetching user:', error); return null; }
-};
-
-export const setUserPermissions = async (id, permissions) => {
-  const response = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ permissions }),
-  });
-  if (!response.ok) throw new Error(await response.text());
-  return await response.json();
-};
-
-// ============================================================================
-// SMART SEARCH
-// ============================================================================
-
-/**
- * Fast fuzzy search across patients and studies.
- * @param {string} q - search term
- * @returns {Promise<{patients: Array, studies: Array}>}
- */
-export const quickSearch = async (q) => {
-  if (!q || !q.trim()) return { patients: [], studies: [] };
-  const response = await fetch(`${API_BASE}/quick-search?q=${encodeURIComponent(q.trim())}`);
-  if (!response.ok) throw new Error(`Quick search failed: ${response.status}`);
-  return response.json();
-};
-
-/**
- * Ask a natural-language question about the DICOM archive.
- * @param {string} question
- * @param {Array<{role: string, content: string}>} history - prior conversation turns
- * @returns {Promise<{answer: string, model: string}>}
- */
-export const smartSearch = async (question, history = []) => {
-  const response = await fetch(`${API_BASE}/smart-search`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, history }),
-  });
-  if (!response.ok) {
-    const detail = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(detail.detail || `Smart search failed: ${response.status}`);
-  }
-  return response.json();
-};
-
-// ============================================================================
-// HEALTH CHECK
-// ============================================================================
-
-export const checkHealth = async () => {
-  try {
-    const response = await fetch(`${API_BASE.replace('/api', '')}/health`);
-    return await response.json();
-  } catch (error) {
-    console.error('❌ Health check failed:', error);
-    throw error;
-  }
-};

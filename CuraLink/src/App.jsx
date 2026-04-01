@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 import { lazy, Suspense } from "react";
 import Navbar from "./components/navbar.jsx";
 import Background from "./components/background.jsx";
-import FloatingChat from "./components/FloatingChat.jsx";
 import { hasPermission } from "./config/permissions.js";
 
 // Lazy load all pages
@@ -10,7 +9,7 @@ const MWLPage = lazy(() => import("./pages/mwl.jsx"));
 const PatientsPage = lazy(() => import("./pages/PatientPage.jsx"));
 const StudiesPage = lazy(() => import("./pages/studies.jsx"));
 const LoginPage = lazy(() => import("./pages/LoginPage.jsx"));
-const DashboardPage = lazy(() => import("./pages/curalinkDashboard.jsx"));
+const DashboardPage = lazy(() => import("./pages/CuralinkDashboard.jsx"));
 const SingleHospitalPage = lazy(() => import("./components/singleHospital.jsx"));
 const AppEntitiesList = lazy(() => import("./pages/AppEntitiesList.jsx"));
 const SeriesPage = lazy(() => import("./pages/SeriesPage.jsx"));
@@ -21,7 +20,6 @@ const RoutingRolesPage = lazy(() => import("./pages/RoutingRolesPage.jsx"));
 const TransformRulesPage = lazy(() => import("./pages/TransformRulesPage.jsx"));
 const ExportRulesPage = lazy(() => import("./pages/ExportRulesPage.jsx"));
 const UsersPage       = lazy(() => import("./pages/UsersPage.jsx"));
-const SmartSearchPage = lazy(() => import("./pages/SmartSearchPage.jsx"));
 
 // Permission-based route guard
 const PermRoute = ({ permId, children }) => {
@@ -54,7 +52,6 @@ function AppContent() {
 
       <div className="relative z-10 flex  w-full flex-1 flex-col lg:flex-row">
         {!hideNavbar && <Navbar />}
-        {!hideNavbar && <FloatingChat />}
 
         <main className="w-full flex-1">
           <Suspense fallback={<PageLoader />}>
@@ -85,7 +82,6 @@ function AppContent() {
 
               {/* Other Routes */}
               <Route path="/mwl"          element={<MWLPage />} />
-              <Route path="/smart-search" element={<SmartSearchPage />} />
             </Routes>
           </Suspense>
         </main>

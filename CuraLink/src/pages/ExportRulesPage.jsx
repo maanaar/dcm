@@ -7,7 +7,7 @@ import {
   cancelExportTasks, rescheduleExportTasks, deleteExportTasks,
   getExportTasksCSVUrl,
   fetchApplicationEntities, fetchDevices,
-} from '../services/curalinkchee';
+} from '../services/curalink';
 
 // ── shared styles ────────────────────────────────────────────────────────────
 const inp =

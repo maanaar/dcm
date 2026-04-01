@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { searchMWL } from "../services/curalinkchee"; 
+import { searchMWL } from "../services/curalink"; 
 
 export default function MWLSearchBox() {
   // ============================================================================

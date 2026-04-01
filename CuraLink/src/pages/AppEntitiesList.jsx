@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchApplicationEntities } from '../services/curalinkchee';
+import { fetchApplicationEntities } from '../services/curalink';
 
 export default function AppEntitiesList() {
   const [entities, setEntities] = useState([]);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchPatients, fetchWebApps } from '../services/curalinkchee';
+import { searchPatients, fetchWebApps } from '../services/curalink';
 
 export default function PatientSearch() {
   const navigate = useNavigate();

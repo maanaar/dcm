@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { searchSeries, fetchWebApps } from '../services/curalinkchee';
+import { searchSeries, fetchWebApps } from '../services/curalink';
 
 export default function SeriesSearch() {
   const [formData, setFormData] = useState({

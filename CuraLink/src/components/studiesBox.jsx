@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchStudies, fetchWebApps } from '../services/curalinkchee';
+import { searchStudies, fetchWebApps } from '../services/curalink';
 
 export default function StudiesBox() {
   const navigate = useNavigate();

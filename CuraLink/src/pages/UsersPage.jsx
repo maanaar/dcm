@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchUsers, createUser, updateUser, deleteUser, setUserPermissions } from '../services/curalinkchee';
+import { fetchUsers, createUser, updateUser, deleteUser, setUserPermissions } from '../services/curalink';
 import { APP_PERMISSIONS, ALL_PERMISSION_IDS } from '../config/permissions';
 
 // ── shared input style ────────────────────────────────────────────────────────

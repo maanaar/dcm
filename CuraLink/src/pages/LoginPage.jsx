@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Background from "../components/background.jsx";
 import { ALL_PERMISSION_IDS } from '../config/permissions';
-import { loginUser } from '../services/curalinkchee';
+import { loginUser } from '../services/curalink';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchDevices } from '../services/curalinkchee';
+import { fetchDevices } from '../services/curalink';
 
 export default function DevicesPage() {
   const [devices, setDevices] = useState([]);
